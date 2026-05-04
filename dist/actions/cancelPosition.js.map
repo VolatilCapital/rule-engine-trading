@@ -1,0 +1,1 @@
+{"version":3,"file":"cancelPosition.js","sourceRoot":"","sources":["../../src/actions/cancelPosition.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,UAAU,EAAE,MAAM,2BAA2B,CAAC;AAEvD,MAAM,UAAU,0BAA0B;IACxC,OAAO;QACL,SAAS,EAAE,UAAU,CAAC,eAAe;QACrC,UAAU,EAAE,EAAE;KACf,CAAC;AACJ,CAAC"}

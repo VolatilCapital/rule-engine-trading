@@ -1,0 +1,31 @@
+{
+  "name": "rule-engine-trading",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Trading rule definitions — templates, actions, conditions, registry, and schemas for rule-engine",
+  "exports": {
+    ".": {
+      "import": "./bundle/public-api.js",
+      "types": "./dist/public-api.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "rimraf dist && tsc && tsup",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "clean": "rimraf dist bundle"
+  },
+  "dependencies": {
+    "json-logic-js": "^2.0.5",
+    "rule-engine-monorepo": "github:VolatilCapital/rule-engine-monorepo"
+  },
+  "devDependencies": {
+    "rimraf": "^6.1.3",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.5"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

@@ -1,0 +1,1 @@
+{"version":3,"file":"moveStopLoss.js","sourceRoot":"","sources":["../../src/actions/moveStopLoss.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,UAAU,EAAE,MAAM,2BAA2B,CAAC;AAMvD,MAAM,UAAU,wBAAwB,CAAC,MAA0B;IACjE,OAAO;QACL,SAAS,EAAE,UAAU,CAAC,cAAc;QACpC,UAAU,EAAE,MAAM;KACnB,CAAC;AACJ,CAAC"}

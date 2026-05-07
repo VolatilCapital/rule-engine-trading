@@ -98,6 +98,7 @@ Après `.run()`, `sc.harness` expose le `RuleScenarioHarness` sous-jacent pour l
 | `freeTrade` (FREE_TRADE_2R) | Partial close 50% à +2R, garde-fou anti re-trigger | `freeTrade.scenario.test.ts` |
 | `partialCloseAtPrice` | Partial close 30 % au prix cible BUY, garde-fou anti re-trigger | `partialCloseAtPrice.scenario.test.ts` |
 | `lockInProfitStop` (LOCK_IN_3R_TO_1R) | Move SL pour locker +1R à +3R, garde-fou anti re-trigger | `lockInProfitStop.scenario.test.ts` |
+| `takePartial` variantes (1R_33PCT, 2R_50PCT, 1R_25PCT, 2R_25PCT) | Variantes prédéfinies + composition 25 % à 1R puis 25 % du résiduel à 2R | `takePartialVariants.scenario.test.ts` |
 
 ## Templates restants
 
@@ -106,4 +107,3 @@ Après `.run()`, `sc.harness` expose le `RuleScenarioHarness` sous-jacent pour l
 | `timeBasedStop` | `createTimeBasedStopTemplate` | Close si profit min non atteint dans le temps — nécessite mock clock |
 | `patternBasedExit` | `createPatternBasedExitTemplate` | Sortie sur pattern de bougie — nécessite injection patterns |
 | `cancelPendingOnPriceLevel` | `createCancelPendingOnPriceLevelTemplate` | Annule ordre en attente si prix d'invalidation touché — nécessite pending orders au DSL |
-| `takePartial` (variantes supplémentaires) | `TAKE_PARTIAL_2R_50PCT`, `TAKE_PARTIAL_1R_33PCT`, etc. | Même mécanique, seuils différents |

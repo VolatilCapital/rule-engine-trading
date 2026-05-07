@@ -62,6 +62,7 @@ describe('monTemplate', () => {
 | `.expectStopLossAt(price)` | Assert le SL courant |
 | `.expectTakeProfitAt(price)` | Assert le TP courant |
 | `.expectActionExecuted(actionType)` | Assert qu'au moins 1 action du type donné a été exécutée |
+| `.setPatterns({ bearish?, bullish?, ... })` | Injecte des flags pattern dans le contexte des prochains ticks (remplace, ne fusionne pas) |
 | `.run()` → `Promise<void>` | Exécute la séquence, throw si une assertion échoue |
 
 Après `.run()`, `sc.harness` expose le `RuleScenarioHarness` sous-jacent pour les assertions fines (comptage d'actions, état de position, etc.).
@@ -83,7 +84,7 @@ Après `.run()`, `sc.harness` expose le `RuleScenarioHarness` sous-jacent pour l
 - **Calcul du R** — `(currentPrice - entry) / (entry - SL)` valide uniquement pour les positions BUY. À inverser pour SELL.
 - **`elapsedMinutes`** — basé sur `Date.now()` réel. Les templates time-based (`timeBasedStop`) nécessitent `vi.useFakeTimers()` ou une clock injectable.
 - **Convention prix `bid = ask = price`** — spread zéro. Déterministe mais ne teste pas les scénarios spread-dépendants.
-- **`patterns` context** — champ vide. Les templates pattern-based (`patternBasedExit`) nécessitent une injection de détection de patterns.
+- **`patterns` context** — peuplé via `.setPatterns({ ... })` sur le DSL ou `harness.setPatterns(...)`. Les templates pattern-based (`patternBasedExit`) lisent les flags via JsonLogic en notation pointée (ex: `patterns.bearish`).
 - **`attachRule(params)`** — le paramètre `params` n'est pas transmis au template. Les templates reçoivent tous leurs paramètres via leur factory (ex: `createMoveSLToBreakevenTemplate({ thresholdR: 1 })`).
 - **`lockInStopPrice_<R>R` pré-calculé** — le contexte expose `lockInStopPrice_0.5R`, `_1R`, `_1.5R`, `_2R`, `_2.5R`, `_3R`, `_4R`, `_5R` (BUY uniquement). Pour des R hors liste, étendre le tableau dans `RuleScenarioHarness#buildContext`.
 
@@ -99,11 +100,11 @@ Après `.run()`, `sc.harness` expose le `RuleScenarioHarness` sous-jacent pour l
 | `partialCloseAtPrice` | Partial close 30 % au prix cible BUY, garde-fou anti re-trigger | `partialCloseAtPrice.scenario.test.ts` |
 | `lockInProfitStop` (LOCK_IN_3R_TO_1R) | Move SL pour locker +1R à +3R, garde-fou anti re-trigger | `lockInProfitStop.scenario.test.ts` |
 | `takePartial` variantes (1R_33PCT, 2R_50PCT, 1R_25PCT, 2R_25PCT) | Variantes prédéfinies + composition 25 % à 1R puis 25 % du résiduel à 2R | `takePartialVariants.scenario.test.ts` |
+| `patternBasedExit` (PATTERN_EXIT_LONG_BEARISH) | Close BUY sur `patterns.bearish=true`, garde-fou anti re-trigger, no-trigger sans pattern | `patternBasedExit.scenario.test.ts` |
 
 ## Templates restants
 
 | Template | Factory | Spécificité |
 |---|---|---|
 | `timeBasedStop` | `createTimeBasedStopTemplate` | Close si profit min non atteint dans le temps — nécessite mock clock |
-| `patternBasedExit` | `createPatternBasedExitTemplate` | Sortie sur pattern de bougie — nécessite injection patterns |
 | `cancelPendingOnPriceLevel` | `createCancelPendingOnPriceLevelTemplate` | Annule ordre en attente si prix d'invalidation touché — nécessite pending orders au DSL |

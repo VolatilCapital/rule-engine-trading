@@ -28,6 +28,7 @@ type Step =
   | { kind: 'openPosition'; opts: OpenPositionOpts }
   | { kind: 'attachRule'; template: RuleTemplate; params?: Record<string, unknown> }
   | { kind: 'priceTo'; price: number }
+  | { kind: 'setPatterns'; patterns: Record<string, boolean> }
   | { kind: 'expectStopLossAt'; price: number; tolerance?: number }
   | { kind: 'expectTakeProfitAt'; price: number; tolerance?: number }
   | { kind: 'expectActionExecuted'; actionType: ActionType };
@@ -90,6 +91,15 @@ export class ScenarioBuilder {
   }
 
   /**
+   * Set pattern flags injected into the rule evaluation context for
+   * subsequent ticks. Replaces (does not merge) any previously-set patterns.
+   */
+  setPatterns(patterns: Record<string, boolean>): this {
+    this.#steps.push({ kind: 'setPatterns', patterns });
+    return this;
+  }
+
+  /**
    * Assert that the current SL equals `price` (within optional `tolerance`).
    * Evaluated at the point in the sequence where it appears.
    */
@@ -139,6 +149,10 @@ export class ScenarioBuilder {
 
         case 'priceTo':
           await harness.priceTo(step.price);
+          break;
+
+        case 'setPatterns':
+          harness.setPatterns(step.patterns);
           break;
 
         case 'expectStopLossAt': {

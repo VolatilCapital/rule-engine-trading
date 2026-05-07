@@ -90,6 +90,7 @@ export class RuleScenarioHarness {
   #peakR = 0;
   #lastBid = 0;
   #lastAsk = 0;
+  #patterns: Record<string, boolean> = {};
 
   /** Active rule instance IDs — populated by attachRule(). */
   readonly #ruleIds: string[] = [];
@@ -193,6 +194,14 @@ export class RuleScenarioHarness {
   }
 
   /**
+   * Set the pattern flags exposed in the rule evaluation context.
+   * Replaces (does not merge) the previous pattern map.
+   */
+  setPatterns(patterns: Record<string, boolean>): void {
+    this.#patterns = { ...patterns };
+  }
+
+  /**
    * Evaluate all attached rules against the current broker state.
    * Call this manually if you drive the price feed without using priceTo().
    */
@@ -292,7 +301,7 @@ export class RuleScenarioHarness {
       drawdownFromPeakR: Math.max(0, this.#peakR - currentR),
       entryPrice,
       facts: {},
-      patterns: {},
+      patterns: { ...this.#patterns },
       ...lockInStops,
     };
   }

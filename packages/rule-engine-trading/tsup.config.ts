@@ -1,10 +1,10 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src/public-api.ts'],
+  entry: ['dist/public-api.js'],
   format: ['esm'],
   dts: false,
-  clean: true,
   outDir: 'bundle',
+  bundle: true,
   external: ['rule-engine-monorepo'],
 });

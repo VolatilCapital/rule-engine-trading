@@ -10,7 +10,8 @@
     }
   },
   "scripts": {
-    "build": "rimraf dist bundle && tsc && tsup",
+    "build": "rimraf dist && tsc",
+    "bundle": "rimraf bundle && tsup",
     "type-check": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run",

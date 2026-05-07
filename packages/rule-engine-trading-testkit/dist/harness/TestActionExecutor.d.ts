@@ -12,13 +12,14 @@ import type { SimulatedPlatformPosition } from '@volatil/simulated-platform';
  * The harness populates this from broker state before each rule tick.
  */
 export interface TradingExecutionContext {
-    positionId: string;
+    /** Position id when an open position exists. Optional for pending-only scenarios. */
+    positionId?: string;
+    /** Pending order id when one is placed. Used by CANCEL_POSITION on pending-only flows. */
+    pendingOrderId?: string;
     symbol: string;
-    /** Current position quantity (lots) */
+    /** Position quantity (lots). 0 when no position is open. */
     quantity: number;
-    /** Current bid price */
     currentPrice: number;
-    /** Arbitrary extra facts forwarded from the ContextProvider */
     [key: string]: unknown;
 }
 /**

@@ -14,7 +14,7 @@
  *   .run();
  * ```
  */
-import { RuleScenarioHarness, type HarnessConfig, type OpenPositionOpts } from '../harness/RuleScenarioHarness.js';
+import { RuleScenarioHarness, type HarnessConfig, type OpenPositionOpts, type PlacePendingOrderOpts } from '../harness/RuleScenarioHarness.js';
 import { ActionType } from '@volatil/rule-engine-trading';
 import type { RuleTemplate } from 'rule-engine-monorepo/rule-engine';
 /**
@@ -37,6 +37,11 @@ export declare class ScenarioBuilder {
     platform(config: HarnessConfig): this;
     /** Open a market position. */
     openPosition(opts: OpenPositionOpts): this;
+    /**
+     * Place a pending order (LIMIT or STOP) on the configured symbol.
+     * The next tick's context will expose `pendingOrderId`.
+     */
+    placePendingOrder(opts: PlacePendingOrderOpts): this;
     /** Attach a rule template to the current position. */
     attachRule(template: RuleTemplate, params?: Record<string, unknown>): this;
     /**
@@ -44,6 +49,19 @@ export declare class ScenarioBuilder {
      * Assertion steps placed after this will see the post-tick harness state.
      */
     priceTo(price: number): this;
+    /**
+     * Set pattern flags injected into the rule evaluation context for
+     * subsequent ticks. Replaces (does not merge) any previously-set patterns.
+     */
+    setPatterns(patterns: Record<string, boolean>): this;
+    /**
+     * Advance the harness clock by `minutes`. Requires the platform to have been
+     * configured with a `TestClock`; otherwise this is a no-op on the real clock.
+     *
+     * Note: this only moves time forward — the next tick will recompute
+     * `elapsedMinutes` against the new clock value.
+     */
+    advanceTime(minutes: number): this;
     /**
      * Assert that the current SL equals `price` (within optional `tolerance`).
      * Evaluated at the point in the sequence where it appears.

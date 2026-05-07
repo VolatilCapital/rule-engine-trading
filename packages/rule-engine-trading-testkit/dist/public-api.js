@@ -8,4 +8,6 @@ export { scenario, ScenarioBuilder } from './dsl/scenario.js';
 export { RuleScenarioHarness } from './harness/RuleScenarioHarness.js';
 // Executor
 export { TestActionExecutor } from './harness/TestActionExecutor.js';
+// Clock port
+export { TestClock, systemClock } from './harness/Clock.js';
 //# sourceMappingURL=public-api.js.map

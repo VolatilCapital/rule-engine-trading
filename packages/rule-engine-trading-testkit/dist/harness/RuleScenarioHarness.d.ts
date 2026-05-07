@@ -7,6 +7,7 @@ import { type ActionDefinition } from 'rule-engine-monorepo/rule-engine';
 import type { RuleTemplate } from 'rule-engine-monorepo/rule-engine';
 import { SimulatedPlatformPosition } from '@volatil/simulated-platform';
 import type { Position } from '@volatil/simulated-platform';
+import { type Clock } from './Clock.js';
 /** Minimal set of facts the ContextProvider exposes to rule conditions. */
 export interface TradingContextFacts {
     /** Current mid price (bid = ask for zero-spread mode) */
@@ -28,6 +29,11 @@ export interface HarnessConfig {
     symbol: string;
     leverage: number;
     balance: number;
+    /**
+     * Optional time port. Defaults to `systemClock` (real Date.now()).
+     * Pass a `TestClock` to drive `elapsedMinutes` deterministically.
+     */
+    clock?: Clock;
 }
 export interface OpenPositionOpts {
     side: 'BUY' | 'SELL';
@@ -35,6 +41,15 @@ export interface OpenPositionOpts {
     entry: number;
     sl?: number;
     tp?: number;
+}
+export interface PlacePendingOrderOpts {
+    /** LIMIT triggers when price crosses the level from the opposite direction; STOP triggers when crossed in the trade direction. */
+    type: 'LIMIT' | 'STOP';
+    side: 'BUY' | 'SELL';
+    /** Lot size */
+    volume: number;
+    /** Trigger price */
+    price: number;
 }
 /**
  * Provides an integrated test environment for trading rule scenarios.
@@ -65,6 +80,12 @@ export declare class RuleScenarioHarness {
      */
     openPosition(opts: OpenPositionOpts): Promise<void>;
     /**
+     * Place a pending order (LIMIT or STOP) on the configured symbol.
+     * Returns the broker order id; also stored internally so the next tick's
+     * context exposes `pendingOrderId`.
+     */
+    placePendingOrder(opts: PlacePendingOrderOpts): Promise<string>;
+    /**
      * Attach a rule template to the open position.
      * Instantiates a RuleInstance, saves it to the repository, and registers
      * its ID so that tick() will evaluate it.
@@ -76,6 +97,11 @@ export declare class RuleScenarioHarness {
      * Internally calls tick() after updating the price feed.
      */
     priceTo(price: number): Promise<void>;
+    /**
+     * Set the pattern flags exposed in the rule evaluation context.
+     * Replaces (does not merge) the previous pattern map.
+     */
+    setPatterns(patterns: Record<string, boolean>): void;
     /**
      * Evaluate all attached rules against the current broker state.
      * Call this manually if you drive the price feed without using priceTo().
@@ -94,6 +120,8 @@ export declare class RuleScenarioHarness {
         bid: number;
         ask: number;
     };
+    /** Currently tracked pending order id, if any. */
+    get pendingOrderId(): string | null;
     /** Expose the underlying broker for advanced test assertions. */
     get broker(): SimulatedPlatformPosition;
 }

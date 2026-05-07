@@ -6,6 +6,7 @@
 import { RuleInstance, RuleExecutionService, JsonLogicConditionEvaluator, InMemoryRepository, silentLogger, } from 'rule-engine-monorepo/rule-engine';
 import { SimulatedPlatformPosition, SinglePlatformRegistry, } from '@volatil/simulated-platform';
 import { TestActionExecutor } from './TestActionExecutor.js';
+import { systemClock } from './Clock.js';
 /**
  * Provides an integrated test environment for trading rule scenarios.
  *
@@ -33,17 +34,21 @@ export class RuleScenarioHarness {
     #executor;
     #evaluator;
     #executionService;
+    #clock;
     #positionId = null;
+    #pendingOrderId = null;
     #entryPrice = null;
     #initialSL = null;
     #openedAt = null;
     #peakR = 0;
     #lastBid = 0;
     #lastAsk = 0;
+    #patterns = {};
     /** Active rule instance IDs — populated by attachRule(). */
     #ruleIds = [];
     constructor(config) {
         this.#symbol = config.symbol;
+        this.#clock = config.clock ?? systemClock;
         this.#broker = new SimulatedPlatformPosition({
             symbols: [
                 {
@@ -73,7 +78,7 @@ export class RuleScenarioHarness {
         // Price must be set before submitting the order so the broker has a price.
         this.#lastBid = opts.entry;
         this.#lastAsk = opts.entry;
-        this.#broker.onPriceTick({ symbol: this.#symbol, bid: opts.entry, ask: opts.entry, timestamp: Date.now() });
+        this.#broker.onPriceTick({ symbol: this.#symbol, bid: opts.entry, ask: opts.entry, timestamp: this.#clock.now() });
         const result = await this.#broker.submitOrder({
             symbol: this.#symbol,
             type: 'MARKET',
@@ -85,7 +90,7 @@ export class RuleScenarioHarness {
         }
         this.#positionId = result.positionId;
         this.#entryPrice = opts.entry;
-        this.#openedAt = Date.now();
+        this.#openedAt = this.#clock.now();
         this.#peakR = 0;
         if (opts.sl !== undefined) {
             const slResult = this.#broker.updatePositionStopLoss(result.positionId, opts.sl);
@@ -100,6 +105,25 @@ export class RuleScenarioHarness {
                 throw new Error(`Could not set TP: ${tpResult.reason}`);
             }
         }
+    }
+    /**
+     * Place a pending order (LIMIT or STOP) on the configured symbol.
+     * Returns the broker order id; also stored internally so the next tick's
+     * context exposes `pendingOrderId`.
+     */
+    async placePendingOrder(opts) {
+        const result = await this.#broker.submitOrder({
+            symbol: this.#symbol,
+            type: opts.type,
+            side: opts.side === 'BUY' ? 'buy' : 'sell',
+            quantity: opts.volume,
+            price: opts.price,
+        });
+        if (!result.success || !result.orderId) {
+            throw new Error(`placePendingOrder failed: ${result.reason ?? 'unknown'}`);
+        }
+        this.#pendingOrderId = result.orderId;
+        return result.orderId;
     }
     /**
      * Attach a rule template to the open position.
@@ -119,8 +143,15 @@ export class RuleScenarioHarness {
     async priceTo(price) {
         this.#lastBid = price;
         this.#lastAsk = price;
-        this.#broker.onPriceTick({ symbol: this.#symbol, bid: price, ask: price, timestamp: Date.now() });
+        this.#broker.onPriceTick({ symbol: this.#symbol, bid: price, ask: price, timestamp: this.#clock.now() });
         await this.tick();
+    }
+    /**
+     * Set the pattern flags exposed in the rule evaluation context.
+     * Replaces (does not merge) the previous pattern map.
+     */
+    setPatterns(patterns) {
+        this.#patterns = { ...patterns };
     }
     /**
      * Evaluate all attached rules against the current broker state.
@@ -157,6 +188,10 @@ export class RuleScenarioHarness {
     get lastBidAsk() {
         return { bid: this.#lastBid, ask: this.#lastAsk };
     }
+    /** Currently tracked pending order id, if any. */
+    get pendingOrderId() {
+        return this.#pendingOrderId;
+    }
     // ──────────────────────────────────────────────────────────────────────────
     // Internal helpers
     // ──────────────────────────────────────────────────────────────────────────
@@ -166,27 +201,27 @@ export class RuleScenarioHarness {
         return this.#broker.getOpenPositions().find(p => p.id === this.#positionId);
     }
     #buildContext() {
-        if (!this.#positionId) {
-            throw new Error('No open position — call openPosition() first');
-        }
-        const currentPrice = this.#lastBid; // zero-spread: bid = ask = price
+        const currentPrice = this.#lastBid;
         const entryPrice = this.#entryPrice ?? currentPrice;
         const initialSL = this.#initialSL;
-        // R = (currentPrice - entry) / (entry - SL). Only valid for BUY; invert for SELL.
         let currentR = 0;
         if (initialSL !== null && Math.abs(entryPrice - initialSL) > 0) {
             currentR = (currentPrice - entryPrice) / (entryPrice - initialSL);
         }
-        // Track peak R over the life of the trade
         if (currentR > this.#peakR) {
             this.#peakR = currentR;
         }
-        const elapsedMs = this.#openedAt !== null ? Date.now() - this.#openedAt : 0;
+        const elapsedMs = this.#openedAt !== null ? this.#clock.now() - this.#openedAt : 0;
         const elapsedMinutes = elapsedMs / 60_000;
         const pos = this.#openPosition();
         const quantity = pos ? pos.quantity.toNumber() : 0;
-        return {
-            positionId: this.#positionId,
+        const lockInStops = initialSL !== null && Math.abs(entryPrice - initialSL) > 0
+            ? Object.fromEntries([0.5, 1, 1.5, 2, 2.5, 3, 4, 5].map(r => [
+                `lockInStopPrice_${r}R`,
+                entryPrice + r * (entryPrice - initialSL),
+            ]))
+            : {};
+        const ctx = {
             symbol: this.#symbol,
             quantity,
             currentPrice,
@@ -196,8 +231,14 @@ export class RuleScenarioHarness {
             drawdownFromPeakR: Math.max(0, this.#peakR - currentR),
             entryPrice,
             facts: {},
-            patterns: {},
+            patterns: { ...this.#patterns },
+            ...lockInStops,
         };
+        if (this.#positionId)
+            ctx.positionId = this.#positionId;
+        if (this.#pendingOrderId)
+            ctx.pendingOrderId = this.#pendingOrderId;
+        return ctx;
     }
     /** Expose the underlying broker for advanced test assertions. */
     get broker() {

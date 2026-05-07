@@ -57,14 +57,22 @@ export class TestActionExecutor {
         const params = this.#resolveParams(action.parameters, context);
         switch (action.actionRef) {
             case ActionType.MOVE_STOP_LOSS: {
+                const positionId = context.positionId;
+                if (!positionId) {
+                    return { success: false, error: 'MOVE_STOP_LOSS: positionId required' };
+                }
                 const newSL = params['newStopPrice'];
-                const result = this.#broker.updatePositionStopLoss(context.positionId, newSL);
+                const result = this.#broker.updatePositionStopLoss(positionId, newSL);
                 if (!result.success) {
                     return { success: false, error: result.reason };
                 }
                 return { success: true, data: { newStopLoss: newSL } };
             }
             case ActionType.PARTIAL_CLOSE: {
+                const positionId = context.positionId;
+                if (!positionId) {
+                    return { success: false, error: 'PARTIAL_CLOSE: positionId required' };
+                }
                 const { quantity, percentage } = params;
                 let qty;
                 if (quantity !== undefined) {
@@ -76,7 +84,7 @@ export class TestActionExecutor {
                 else {
                     return { success: false, error: 'PARTIAL_CLOSE: neither quantity nor percentage specified' };
                 }
-                const result = await this.#broker.closePartialPosition(context.positionId, qty);
+                const result = await this.#broker.closePartialPosition(positionId, qty);
                 if (!result.success) {
                     return { success: false, error: result.reason };
                 }
@@ -89,16 +97,30 @@ export class TestActionExecutor {
                 };
             }
             case ActionType.CANCEL_POSITION: {
-                const result = await this.#broker.closePosition(context.positionId);
-                if (!result.success) {
-                    return { success: false, error: result.reason };
+                if (context.pendingOrderId) {
+                    const result = this.#broker.cancelOrder(context.pendingOrderId);
+                    if (!result.success) {
+                        return { success: false, error: result.reason };
+                    }
+                    return { success: true };
                 }
-                return { success: true };
+                if (context.positionId) {
+                    const result = await this.#broker.closePosition(context.positionId);
+                    if (!result.success) {
+                        return { success: false, error: result.reason };
+                    }
+                    return { success: true };
+                }
+                return { success: false, error: 'CANCEL_POSITION: neither pendingOrderId nor positionId present' };
             }
             case ActionType.PLACE_ORDER: {
                 const orderType = params['type'];
                 if (orderType === 'close_position') {
-                    const result = await this.#broker.closePosition(context.positionId);
+                    const positionId = context.positionId;
+                    if (!positionId) {
+                        return { success: false, error: 'PLACE_ORDER close_position: positionId required' };
+                    }
+                    const result = await this.#broker.closePosition(positionId);
                     if (!result.success) {
                         return { success: false, error: result.reason };
                     }

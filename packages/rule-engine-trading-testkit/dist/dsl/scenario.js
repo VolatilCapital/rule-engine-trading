@@ -52,6 +52,14 @@ export class ScenarioBuilder {
         this.#steps.push({ kind: 'openPosition', opts });
         return this;
     }
+    /**
+     * Place a pending order (LIMIT or STOP) on the configured symbol.
+     * The next tick's context will expose `pendingOrderId`.
+     */
+    placePendingOrder(opts) {
+        this.#steps.push({ kind: 'placePendingOrder', opts });
+        return this;
+    }
     /** Attach a rule template to the current position. */
     attachRule(template, params) {
         this.#steps.push({ kind: 'attachRule', template, params });
@@ -63,6 +71,25 @@ export class ScenarioBuilder {
      */
     priceTo(price) {
         this.#steps.push({ kind: 'priceTo', price });
+        return this;
+    }
+    /**
+     * Set pattern flags injected into the rule evaluation context for
+     * subsequent ticks. Replaces (does not merge) any previously-set patterns.
+     */
+    setPatterns(patterns) {
+        this.#steps.push({ kind: 'setPatterns', patterns });
+        return this;
+    }
+    /**
+     * Advance the harness clock by `minutes`. Requires the platform to have been
+     * configured with a `TestClock`; otherwise this is a no-op on the real clock.
+     *
+     * Note: this only moves time forward — the next tick will recompute
+     * `elapsedMinutes` against the new clock value.
+     */
+    advanceTime(minutes) {
+        this.#steps.push({ kind: 'advanceTime', minutes });
         return this;
     }
     /**
@@ -100,12 +127,24 @@ export class ScenarioBuilder {
                 case 'openPosition':
                     await harness.openPosition(step.opts);
                     break;
+                case 'placePendingOrder':
+                    await harness.placePendingOrder(step.opts);
+                    break;
                 case 'attachRule':
                     await harness.attachRule(step.template, step.params);
                     break;
                 case 'priceTo':
                     await harness.priceTo(step.price);
                     break;
+                case 'setPatterns':
+                    harness.setPatterns(step.patterns);
+                    break;
+                case 'advanceTime': {
+                    const clock = this.#platformConfig?.clock;
+                    assert.ok(clock !== undefined && 'advance' in clock && typeof clock.advance === 'function', `[scenario: ${this.#description}] .advanceTime() requires a TestClock passed via .platform({ clock: new TestClock() })`);
+                    clock.advance(step.minutes * 60_000);
+                    break;
+                }
                 case 'expectStopLossAt': {
                     const sl = harness.currentSL;
                     assert.ok(sl !== undefined, `[scenario: ${this.#description}] expectStopLossAt(${step.price}): SL is undefined`);

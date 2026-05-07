@@ -4,8 +4,15 @@
   "private": true,
   "type": "module",
   "description": "Trading rule definitions monorepo — package + integration testkit",
+  "exports": {
+    "./rule-engine-trading": {
+      "import": "./packages/rule-engine-trading/bundle/public-api.js",
+      "types": "./packages/rule-engine-trading/dist/public-api.d.ts"
+    }
+  },
   "scripts": {
     "build": "pnpm -r build",
+    "bundle": "pnpm -r bundle",
     "test": "pnpm -r test",
     "test:run": "pnpm -r test:run",
     "type-check": "pnpm -r exec tsc --noEmit",

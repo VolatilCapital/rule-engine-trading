@@ -269,6 +269,18 @@ export class RuleScenarioHarness {
     const pos = this.#openPosition();
     const quantity = pos ? pos.quantity.toNumber() : 0;
 
+    // Pre-computed lock-in stop prices for various R levels (BUY only, requires valid initialSL).
+    // For BUY: lockInStopPrice_XR = entryPrice + X * (entryPrice - initialSL)
+    const lockInStops: Record<string, number> =
+      initialSL !== null && Math.abs(entryPrice - initialSL) > 0
+        ? Object.fromEntries(
+            [0.5, 1, 1.5, 2, 2.5, 3, 4, 5].map(r => [
+              `lockInStopPrice_${r}R`,
+              entryPrice + r * (entryPrice - initialSL),
+            ]),
+          )
+        : {};
+
     return {
       positionId: this.#positionId,
       symbol: this.#symbol,
@@ -281,6 +293,7 @@ export class RuleScenarioHarness {
       entryPrice,
       facts: {},
       patterns: {},
+      ...lockInStops,
     };
   }
 

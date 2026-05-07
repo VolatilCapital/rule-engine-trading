@@ -85,6 +85,7 @@ Après `.run()`, `sc.harness` expose le `RuleScenarioHarness` sous-jacent pour l
 - **Convention prix `bid = ask = price`** — spread zéro. Déterministe mais ne teste pas les scénarios spread-dépendants.
 - **`patterns` context** — champ vide. Les templates pattern-based (`patternBasedExit`) nécessitent une injection de détection de patterns.
 - **`attachRule(params)`** — le paramètre `params` n'est pas transmis au template. Les templates reçoivent tous leurs paramètres via leur factory (ex: `createMoveSLToBreakevenTemplate({ thresholdR: 1 })`).
+- **`lockInStopPrice_<R>R` pré-calculé** — le contexte expose `lockInStopPrice_0.5R`, `_1R`, `_1.5R`, `_2R`, `_2.5R`, `_3R`, `_4R`, `_5R` (BUY uniquement). Pour des R hors liste, étendre le tableau dans `RuleScenarioHarness#buildContext`.
 
 ## Templates couverts
 
@@ -95,14 +96,14 @@ Après `.run()`, `sc.harness` expose le `RuleScenarioHarness` sous-jacent pour l
 | `maxDrawdownFromPeak` (MAX_DD_2R_PEAK_1R_DD) | Close sur drawdown 1R depuis pic 2R | `maxDrawdownFromPeak.scenario.test.ts` |
 | `takeProfit` | Close à +2R, garde-fou sous-seuil | `takeProfit.scenario.test.ts` |
 | `freeTrade` (FREE_TRADE_2R) | Partial close 50% à +2R, garde-fou anti re-trigger | `freeTrade.scenario.test.ts` |
+| `partialCloseAtPrice` | Partial close 30 % au prix cible BUY, garde-fou anti re-trigger | `partialCloseAtPrice.scenario.test.ts` |
+| `lockInProfitStop` (LOCK_IN_3R_TO_1R) | Move SL pour locker +1R à +3R, garde-fou anti re-trigger | `lockInProfitStop.scenario.test.ts` |
 
 ## Templates restants
 
 | Template | Factory | Spécificité |
 |---|---|---|
-| `lockInProfitStop` | `createLockInProfitStopTemplate` | SL en 2 paliers (triggerR → lockInR) — nécessite injection `lockInStopPrice_<R>R` dans le contexte |
 | `timeBasedStop` | `createTimeBasedStopTemplate` | Close si profit min non atteint dans le temps — nécessite mock clock |
 | `patternBasedExit` | `createPatternBasedExitTemplate` | Sortie sur pattern de bougie — nécessite injection patterns |
 | `cancelPendingOnPriceLevel` | `createCancelPendingOnPriceLevelTemplate` | Annule ordre en attente si prix d'invalidation touché — nécessite pending orders au DSL |
-| `partialCloseAtPrice` | `createPartialCloseAtPriceTemplate` | Partial close à un prix absolu (non R-based) |
 | `takePartial` (variantes supplémentaires) | `TAKE_PARTIAL_2R_50PCT`, `TAKE_PARTIAL_1R_33PCT`, etc. | Même mécanique, seuils différents |

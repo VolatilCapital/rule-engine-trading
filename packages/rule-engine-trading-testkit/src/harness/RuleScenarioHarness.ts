@@ -60,6 +60,16 @@ export interface OpenPositionOpts {
   tp?: number;
 }
 
+export interface PlacePendingOrderOpts {
+  /** LIMIT triggers when price crosses the level from the opposite direction; STOP triggers when crossed in the trade direction. */
+  type: 'LIMIT' | 'STOP';
+  side: 'BUY' | 'SELL';
+  /** Lot size */
+  volume: number;
+  /** Trigger price */
+  price: number;
+}
+
 /**
  * Provides an integrated test environment for trading rule scenarios.
  *
@@ -91,6 +101,7 @@ export class RuleScenarioHarness {
   readonly #clock: Clock;
 
   #positionId: string | null = null;
+  #pendingOrderId: string | null = null;
   #entryPrice: number | null = null;
   #initialSL: number | null = null;
   #openedAt: number | null = null;
@@ -179,6 +190,26 @@ export class RuleScenarioHarness {
   }
 
   /**
+   * Place a pending order (LIMIT or STOP) on the configured symbol.
+   * Returns the broker order id; also stored internally so the next tick's
+   * context exposes `pendingOrderId`.
+   */
+  async placePendingOrder(opts: PlacePendingOrderOpts): Promise<string> {
+    const result = await this.#broker.submitOrder({
+      symbol: this.#symbol,
+      type: opts.type,
+      side: opts.side === 'BUY' ? 'buy' : 'sell',
+      quantity: opts.volume,
+      price: opts.price,
+    });
+    if (!result.success || !result.orderId) {
+      throw new Error(`placePendingOrder failed: ${result.reason ?? 'unknown'}`);
+    }
+    this.#pendingOrderId = result.orderId;
+    return result.orderId;
+  }
+
+  /**
    * Attach a rule template to the open position.
    * Instantiates a RuleInstance, saves it to the repository, and registers
    * its ID so that tick() will evaluate it.
@@ -251,6 +282,11 @@ export class RuleScenarioHarness {
     return { bid: this.#lastBid, ask: this.#lastAsk };
   }
 
+  /** Currently tracked pending order id, if any. */
+  get pendingOrderId(): string | null {
+    return this.#pendingOrderId;
+  }
+
   // ──────────────────────────────────────────────────────────────────────────
   // Internal helpers
   // ──────────────────────────────────────────────────────────────────────────
@@ -261,21 +297,14 @@ export class RuleScenarioHarness {
   }
 
   #buildContext(): TradingExecutionContext {
-    if (!this.#positionId) {
-      throw new Error('No open position — call openPosition() first');
-    }
-
-    const currentPrice = this.#lastBid; // zero-spread: bid = ask = price
+    const currentPrice = this.#lastBid;
     const entryPrice = this.#entryPrice ?? currentPrice;
     const initialSL = this.#initialSL;
 
-    // R = (currentPrice - entry) / (entry - SL). Only valid for BUY; invert for SELL.
     let currentR = 0;
     if (initialSL !== null && Math.abs(entryPrice - initialSL) > 0) {
       currentR = (currentPrice - entryPrice) / (entryPrice - initialSL);
     }
-
-    // Track peak R over the life of the trade
     if (currentR > this.#peakR) {
       this.#peakR = currentR;
     }
@@ -286,8 +315,6 @@ export class RuleScenarioHarness {
     const pos = this.#openPosition();
     const quantity = pos ? pos.quantity.toNumber() : 0;
 
-    // Pre-computed lock-in stop prices for various R levels (BUY only, requires valid initialSL).
-    // For BUY: lockInStopPrice_XR = entryPrice + X * (entryPrice - initialSL)
     const lockInStops: Record<string, number> =
       initialSL !== null && Math.abs(entryPrice - initialSL) > 0
         ? Object.fromEntries(
@@ -298,8 +325,7 @@ export class RuleScenarioHarness {
           )
         : {};
 
-    return {
-      positionId: this.#positionId,
+    const ctx: TradingExecutionContext = {
       symbol: this.#symbol,
       quantity,
       currentPrice,
@@ -312,6 +338,9 @@ export class RuleScenarioHarness {
       patterns: { ...this.#patterns },
       ...lockInStops,
     };
+    if (this.#positionId) ctx.positionId = this.#positionId;
+    if (this.#pendingOrderId) ctx.pendingOrderId = this.#pendingOrderId;
+    return ctx;
   }
 
   /** Expose the underlying broker for advanced test assertions. */

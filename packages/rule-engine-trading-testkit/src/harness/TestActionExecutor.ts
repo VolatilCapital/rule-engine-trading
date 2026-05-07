@@ -15,13 +15,14 @@ import { ActionType } from '@volatil/rule-engine-trading';
  * The harness populates this from broker state before each rule tick.
  */
 export interface TradingExecutionContext {
-  positionId: string;
+  /** Position id when an open position exists. Optional for pending-only scenarios. */
+  positionId?: string;
+  /** Pending order id when one is placed. Used by CANCEL_POSITION on pending-only flows. */
+  pendingOrderId?: string;
   symbol: string;
-  /** Current position quantity (lots) */
+  /** Position quantity (lots). 0 when no position is open. */
   quantity: number;
-  /** Current bid price */
   currentPrice: number;
-  /** Arbitrary extra facts forwarded from the ContextProvider */
   [key: string]: unknown;
 }
 
@@ -89,8 +90,12 @@ export class TestActionExecutor implements IActionExecutor<TradingExecutionConte
 
     switch (action.actionRef as ActionType) {
       case ActionType.MOVE_STOP_LOSS: {
+        const positionId = context.positionId;
+        if (!positionId) {
+          return { success: false, error: 'MOVE_STOP_LOSS: positionId required' };
+        }
         const newSL: number = params['newStopPrice'] as number;
-        const result = this.#broker.updatePositionStopLoss(context.positionId, newSL);
+        const result = this.#broker.updatePositionStopLoss(positionId, newSL);
         if (!result.success) {
           return { success: false, error: result.reason };
         }
@@ -98,6 +103,10 @@ export class TestActionExecutor implements IActionExecutor<TradingExecutionConte
       }
 
       case ActionType.PARTIAL_CLOSE: {
+        const positionId = context.positionId;
+        if (!positionId) {
+          return { success: false, error: 'PARTIAL_CLOSE: positionId required' };
+        }
         const { quantity, percentage } = params as {
           quantity?: number;
           percentage?: number;
@@ -112,7 +121,7 @@ export class TestActionExecutor implements IActionExecutor<TradingExecutionConte
           return { success: false, error: 'PARTIAL_CLOSE: neither quantity nor percentage specified' };
         }
 
-        const result = await this.#broker.closePartialPosition(context.positionId, qty);
+        const result = await this.#broker.closePartialPosition(positionId, qty);
         if (!result.success) {
           return { success: false, error: result.reason };
         }
@@ -126,18 +135,32 @@ export class TestActionExecutor implements IActionExecutor<TradingExecutionConte
       }
 
       case ActionType.CANCEL_POSITION: {
-        const result = await this.#broker.closePosition(context.positionId);
-        if (!result.success) {
-          return { success: false, error: result.reason };
+        if (context.pendingOrderId) {
+          const result = this.#broker.cancelOrder(context.pendingOrderId);
+          if (!result.success) {
+            return { success: false, error: result.reason };
+          }
+          return { success: true };
         }
-        return { success: true };
+        if (context.positionId) {
+          const result = await this.#broker.closePosition(context.positionId);
+          if (!result.success) {
+            return { success: false, error: result.reason };
+          }
+          return { success: true };
+        }
+        return { success: false, error: 'CANCEL_POSITION: neither pendingOrderId nor positionId present' };
       }
 
       case ActionType.PLACE_ORDER: {
         const orderType = params['type'] as string | undefined;
 
         if (orderType === 'close_position') {
-          const result = await this.#broker.closePosition(context.positionId);
+          const positionId = context.positionId;
+          if (!positionId) {
+            return { success: false, error: 'PLACE_ORDER close_position: positionId required' };
+          }
+          const result = await this.#broker.closePosition(positionId);
           if (!result.success) {
             return { success: false, error: result.reason };
           }

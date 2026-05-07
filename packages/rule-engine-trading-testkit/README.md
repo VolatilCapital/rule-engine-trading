@@ -64,6 +64,7 @@ describe('monTemplate', () => {
 | `.expectActionExecuted(actionType)` | Assert qu'au moins 1 action du type donné a été exécutée |
 | `.setPatterns({ bearish?, bullish?, ... })` | Injecte des flags pattern dans le contexte des prochains ticks (remplace, ne fusionne pas) |
 | `.advanceTime(minutes)` | Avance la clock du harness (requiert `.platform({ clock: new TestClock() })`) |
+| `.placePendingOrder({ type: 'LIMIT' \| 'STOP', side, volume, price })` | Pose un ordre en attente sur le symbole ; expose `pendingOrderId` au contexte des prochains ticks |
 | `.run()` → `Promise<void>` | Exécute la séquence, throw si une assertion échoue |
 
 Après `.run()`, `sc.harness` expose le `RuleScenarioHarness` sous-jacent pour les assertions fines (comptage d'actions, état de position, etc.).
@@ -79,6 +80,7 @@ Après `.run()`, `sc.harness` expose le `RuleScenarioHarness` sous-jacent pour l
 
 - **`PLACE_ORDER` général** — seul le cas `type: 'close_position'` est branché sur le broker. Tout autre type d'ordre est loggé sans exécution réelle.
 - **`SCALE_OUT` / `START_TRAILING_STOP`** — non mappés (pas d'API broker correspondante dans `SimulatedPlatformPosition`).
+- **`CANCEL_POSITION`** — polymorphe : annule la pending order si `context.pendingOrderId` est présent, sinon ferme la position via `closePosition(positionId)`. Les autres cas (`MOVE_STOP_LOSS`, `PARTIAL_CLOSE`, `PLACE_ORDER` close_position) requièrent `positionId` et retournent une erreur explicite sinon.
 
 ### Harness / Calculs
 
@@ -103,9 +105,6 @@ Après `.run()`, `sc.harness` expose le `RuleScenarioHarness` sous-jacent pour l
 | `takePartial` variantes (1R_33PCT, 2R_50PCT, 1R_25PCT, 2R_25PCT) | Variantes prédéfinies + composition 25 % à 1R puis 25 % du résiduel à 2R | `takePartialVariants.scenario.test.ts` |
 | `patternBasedExit` (PATTERN_EXIT_LONG_BEARISH) | Close BUY sur `patterns.bearish=true`, garde-fou anti re-trigger, no-trigger sans pattern | `patternBasedExit.scenario.test.ts` |
 | `timeBasedStop` (TIME_STOP_30MIN_1R) | Close BUY si pas +1R après 30 min, no-trigger sous délai, no-trigger si +1R atteint | `timeBasedStop.scenario.test.ts` |
+| `cancelPendingOnPriceLevel` | Annule pending LIMIT BUY si prix franchit le niveau d'invalidation, garde-fou anti re-trigger | `cancelPendingOnPriceLevel.scenario.test.ts` |
 
-## Templates restants
-
-| Template | Factory | Spécificité |
-|---|---|---|
-| `cancelPendingOnPriceLevel` | `createCancelPendingOnPriceLevelTemplate` | Annule ordre en attente si prix d'invalidation touché — nécessite pending orders au DSL |
+**Tous les templates publics sont couverts.** 11 templates / 12 fichiers de scénarios (smoke inclus) / 25 tests.

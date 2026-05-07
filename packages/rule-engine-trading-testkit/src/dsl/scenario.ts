@@ -16,7 +16,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { RuleScenarioHarness, type HarnessConfig, type OpenPositionOpts } from '../harness/RuleScenarioHarness.js';
+import { RuleScenarioHarness, type HarnessConfig, type OpenPositionOpts, type PlacePendingOrderOpts } from '../harness/RuleScenarioHarness.js';
 import { ActionType } from '@volatil/rule-engine-trading';
 import type { RuleTemplate } from 'rule-engine-monorepo/rule-engine';
 
@@ -26,6 +26,7 @@ import type { RuleTemplate } from 'rule-engine-monorepo/rule-engine';
 
 type Step =
   | { kind: 'openPosition'; opts: OpenPositionOpts }
+  | { kind: 'placePendingOrder'; opts: PlacePendingOrderOpts }
   | { kind: 'attachRule'; template: RuleTemplate; params?: Record<string, unknown> }
   | { kind: 'priceTo'; price: number }
   | { kind: 'setPatterns'; patterns: Record<string, boolean> }
@@ -73,6 +74,15 @@ export class ScenarioBuilder {
   /** Open a market position. */
   openPosition(opts: OpenPositionOpts): this {
     this.#steps.push({ kind: 'openPosition', opts });
+    return this;
+  }
+
+  /**
+   * Place a pending order (LIMIT or STOP) on the configured symbol.
+   * The next tick's context will expose `pendingOrderId`.
+   */
+  placePendingOrder(opts: PlacePendingOrderOpts): this {
+    this.#steps.push({ kind: 'placePendingOrder', opts });
     return this;
   }
 
@@ -154,6 +164,10 @@ export class ScenarioBuilder {
       switch (step.kind) {
         case 'openPosition':
           await harness.openPosition(step.opts);
+          break;
+
+        case 'placePendingOrder':
+          await harness.placePendingOrder(step.opts);
           break;
 
         case 'attachRule':

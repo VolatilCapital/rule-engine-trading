@@ -8,7 +8,7 @@ export { scenario, ScenarioBuilder } from './dsl/scenario.js';
 
 // Harness
 export { RuleScenarioHarness } from './harness/RuleScenarioHarness.js';
-export type { HarnessConfig, OpenPositionOpts, TradingContextFacts } from './harness/RuleScenarioHarness.js';
+export type { HarnessConfig, OpenPositionOpts, TradingContextFacts, PlacePendingOrderOpts } from './harness/RuleScenarioHarness.js';
 
 // Executor
 export { TestActionExecutor } from './harness/TestActionExecutor.js';

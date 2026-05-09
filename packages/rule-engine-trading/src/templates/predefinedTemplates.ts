@@ -8,6 +8,7 @@ import { createMaxDrawdownFromPeakTemplate, MaxDrawdownFromPeakTemplateParams } 
 import { createPatternBasedExitTemplate, PatternBasedExitTemplateParams } from './patternBasedExit.js';
 import { createCancelPendingOnPriceLevelTemplate, CancelPendingOnPriceLevelTemplateParams } from './cancelPendingOnPriceLevel.js';
 import { createPartialCloseAtPriceTemplate, PartialCloseAtPriceTemplateParams } from './partialCloseAtPrice.js';
+import { createTrailingStopTemplate, TrailingStopParams } from './trailingStop.js';
 
 /**
  * Template categories for rule classification.
@@ -60,6 +61,33 @@ export interface TemplateDefinition<T = any> {
 // ============================================================================
 // Stop Loss Templates
 // ============================================================================
+
+export const TRAILING_STOP_TEMPLATE: TemplateDefinition<TrailingStopParams> = {
+  id: 'trailing-stop',
+  name: 'Trailing Stop',
+  description: 'Dynamically trails the stop loss at a fixed R-distance below the current price. Activates immediately or after an optional activation threshold.',
+  category: 'stop-loss',
+  maturity: 'lab',
+  parameters: [
+    {
+      name: 'distance',
+      type: 'number',
+      default: 0.5,
+      min: 0.1,
+      max: 10,
+      description: 'Trailing distance in R multiples (> 0)'
+    },
+    {
+      name: 'activationR',
+      type: 'number',
+      default: 1,
+      min: 0.5,
+      max: 20,
+      description: 'Optional R threshold before trailing activates (> 0 if provided)'
+    }
+  ],
+  create: createTrailingStopTemplate
+};
 
 export const SL_BREAKEVEN_TEMPLATE: TemplateDefinition<MoveSLToBreakevenTemplateParams> = {
   id: 'sl-breakeven',
@@ -351,6 +379,7 @@ export const PARTIAL_CLOSE_AT_PRICE_TEMPLATE: TemplateDefinition<PartialCloseAtP
 
 export const templateDefinitions: Record<string, TemplateDefinition> = {
   // Stop Loss
+  [TRAILING_STOP_TEMPLATE.id]: TRAILING_STOP_TEMPLATE,
   [SL_BREAKEVEN_TEMPLATE.id]: SL_BREAKEVEN_TEMPLATE,
   [LOCK_IN_PROFIT_STOP_TEMPLATE.id]: LOCK_IN_PROFIT_STOP_TEMPLATE,
 

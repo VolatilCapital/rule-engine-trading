@@ -521,7 +521,53 @@ function createPartialCloseAtPriceTemplate(params) {
   return RuleTemplate10.create(mainCondition, [action], [historicalCondition]);
 }
 
+// dist/templates/trailingStop.js
+import { RuleTemplate as RuleTemplate11, AtomicCondition as AtomicCondition8, Operator as Operator8 } from "rule-engine-monorepo/rule-engine";
+var trailingStopParamsMap = /* @__PURE__ */ new WeakMap();
+function createTrailingStopTemplate(params) {
+  const { distance, activationR } = params;
+  if (distance <= 0) {
+    throw new Error(`distance must be greater than 0 (got ${distance})`);
+  }
+  if (activationR !== void 0 && activationR <= 0) {
+    throw new Error(`activationR must be greater than 0 (got ${activationR})`);
+  }
+  const condition = new AtomicCondition8("trailingShouldExecute", Operator8.EQUAL, 1, "trailing_should_execute");
+  const action = createMoveStopLossAction({
+    newStopPrice: { var: "trailingNewSL" }
+  });
+  const template = RuleTemplate11.create(condition, [action], [], true);
+  trailingStopParamsMap.set(template, { distance, activationR });
+  return template;
+}
+
 // dist/templates/predefinedTemplates.js
+var TRAILING_STOP_TEMPLATE = {
+  id: "trailing-stop",
+  name: "Trailing Stop",
+  description: "Dynamically trails the stop loss at a fixed R-distance below the current price. Activates immediately or after an optional activation threshold.",
+  category: "stop-loss",
+  maturity: "lab",
+  parameters: [
+    {
+      name: "distance",
+      type: "number",
+      default: 0.5,
+      min: 0.1,
+      max: 10,
+      description: "Trailing distance in R multiples (> 0)"
+    },
+    {
+      name: "activationR",
+      type: "number",
+      default: 1,
+      min: 0.5,
+      max: 20,
+      description: "Optional R threshold before trailing activates (> 0 if provided)"
+    }
+  ],
+  create: createTrailingStopTemplate
+};
 var SL_BREAKEVEN_TEMPLATE = {
   id: "sl-breakeven",
   name: "Stop-Loss to Breakeven",
@@ -775,6 +821,7 @@ var PARTIAL_CLOSE_AT_PRICE_TEMPLATE = {
 };
 var templateDefinitions = {
   // Stop Loss
+  [TRAILING_STOP_TEMPLATE.id]: TRAILING_STOP_TEMPLATE,
   [SL_BREAKEVEN_TEMPLATE.id]: SL_BREAKEVEN_TEMPLATE,
   [LOCK_IN_PROFIT_STOP_TEMPLATE.id]: LOCK_IN_PROFIT_STOP_TEMPLATE,
   // Take Profit
@@ -1188,6 +1235,7 @@ export {
   TIME_STOP_60MIN_2R,
   TP_TEMPLATE,
   TRADING_CONTEXT_FIELDS,
+  TRAILING_STOP_TEMPLATE,
   TriggerType,
   barsSinceEntrySchema,
   cancelPositionSchema,
@@ -1225,6 +1273,7 @@ export {
   createTimeBasedStopTemplate,
   createTimeElapsedCondition,
   createTradingSchemaRegistry,
+  createTrailingStopTemplate,
   isTrailingSchema,
   maxDrawdownSchema,
   moveStopLossSchema,
@@ -1242,5 +1291,6 @@ export {
   tradingActionSchemas,
   tradingConditionSchemas,
   tradingRuleRegistry,
+  trailingStopParamsMap,
   volumeSchema
 };

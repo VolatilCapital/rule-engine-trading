@@ -5,29 +5,29 @@ import { AtomicCondition, Operator, LogicalCondition, LogicalOperator, Memorizab
 // ============================================================================
 
 export function createProfitThresholdCondition(thresholdR: number): AtomicCondition {
-  return new AtomicCondition('currentR', Operator.GREATER_EQUAL, thresholdR, 'currentR_check');
+  return AtomicCondition.create('currentR', Operator.GREATER_EQUAL, thresholdR, 'currentR_check');
 }
 
 export function createProfitBelowCondition(thresholdR: number): AtomicCondition {
-  return new AtomicCondition('currentR', Operator.LESS_THAN, thresholdR, 'currentR_below_check');
+  return AtomicCondition.create('currentR', Operator.LESS_THAN, thresholdR, 'currentR_below_check');
 }
 
 export function createNotExecutedCondition(factKey: string): AtomicCondition {
   // NOT_EQUAL true permet à undefined !== true de retourner true
   // Ainsi la condition passe quand le fait n'existe pas encore
-  return new AtomicCondition(`facts.${factKey}`, Operator.NOT_EQUAL, true, `${factKey}_not_executed_check`);
+  return AtomicCondition.create(`facts.${factKey}`, Operator.NOT_EQUAL, true, `${factKey}_not_executed_check`);
 }
 
 export function createExecutedCondition(factKey: string): AtomicCondition {
-  return new AtomicCondition(`facts.${factKey}`, Operator.EQUAL, true, `${factKey}_executed_check`);
+  return AtomicCondition.create(`facts.${factKey}`, Operator.EQUAL, true, `${factKey}_executed_check`);
 }
 
 export function createAndCondition(conditions: ICondition[], conditionRef: string): LogicalCondition {
-  return new LogicalCondition(LogicalOperator.AND, conditions, conditionRef);
+  return LogicalCondition.create(LogicalOperator.AND, conditions, conditionRef);
 }
 
 export function createOrCondition(conditions: ICondition[], conditionRef: string): LogicalCondition {
-  return new LogicalCondition(LogicalOperator.OR, conditions, conditionRef);
+  return LogicalCondition.create(LogicalOperator.OR, conditions, conditionRef);
 }
 
 export function createHistoricalCondition(factKey: string): MemorizableCondition {
@@ -41,11 +41,11 @@ export function createHistoricalCondition(factKey: string): MemorizableCondition
 // ============================================================================
 
 export function createPriceBelowCondition(price: number): AtomicCondition {
-  return new AtomicCondition('currentPrice', Operator.LESS_EQUAL, price, 'price_below_check');
+  return AtomicCondition.create('currentPrice', Operator.LESS_EQUAL, price, 'price_below_check');
 }
 
 export function createPriceAboveCondition(price: number): AtomicCondition {
-  return new AtomicCondition('currentPrice', Operator.GREATER_EQUAL, price, 'price_above_check');
+  return AtomicCondition.create('currentPrice', Operator.GREATER_EQUAL, price, 'price_above_check');
 }
 
 // ============================================================================
@@ -58,7 +58,7 @@ export function createPriceAboveCondition(price: number): AtomicCondition {
  * Context must include `elapsedMinutes` field.
  */
 export function createTimeElapsedCondition(minutes: number): AtomicCondition {
-  return new AtomicCondition('elapsedMinutes', Operator.GREATER_EQUAL, minutes, 'time_elapsed_check');
+  return AtomicCondition.create('elapsedMinutes', Operator.GREATER_EQUAL, minutes, 'time_elapsed_check');
 }
 
 // ============================================================================
@@ -72,7 +72,7 @@ export function createTimeElapsedCondition(minutes: number): AtomicCondition {
  * Context must include `peakR` field (highest R reached during trade).
  */
 export function createPeakRReachedCondition(thresholdR: number): AtomicCondition {
-  return new AtomicCondition('peakR', Operator.GREATER_EQUAL, thresholdR, 'peakR_reached_check');
+  return AtomicCondition.create('peakR', Operator.GREATER_EQUAL, thresholdR, 'peakR_reached_check');
 }
 
 /**
@@ -80,7 +80,7 @@ export function createPeakRReachedCondition(thresholdR: number): AtomicCondition
  * Context must include `drawdownFromPeakR` field (peakR - currentR).
  */
 export function createDrawdownFromPeakCondition(drawdownR: number): AtomicCondition {
-  return new AtomicCondition('drawdownFromPeakR', Operator.GREATER_EQUAL, drawdownR, 'drawdown_from_peak_check');
+  return AtomicCondition.create('drawdownFromPeakR', Operator.GREATER_EQUAL, drawdownR, 'drawdown_from_peak_check');
 }
 
 // ============================================================================
@@ -95,7 +95,7 @@ export function createDrawdownFromPeakCondition(drawdownR: number): AtomicCondit
  */
 export function createPatternDetectedCondition(patternName: string): AtomicCondition {
   // We'll check patterns.{patternName} == true (set by pattern detector)
-  return new AtomicCondition(`patterns.${patternName}`, Operator.EQUAL, true, `pattern_${patternName}_check`);
+  return AtomicCondition.create(`patterns.${patternName}`, Operator.EQUAL, true, `pattern_${patternName}_check`);
 }
 
 /**
@@ -103,7 +103,7 @@ export function createPatternDetectedCondition(patternName: string): AtomicCondi
  * Context must include `patterns.bearish` boolean.
  */
 export function createBearishPatternCondition(): AtomicCondition {
-  return new AtomicCondition('patterns.bearish', Operator.EQUAL, true, 'bearish_pattern_check');
+  return AtomicCondition.create('patterns.bearish', Operator.EQUAL, true, 'bearish_pattern_check');
 }
 
 /**
@@ -111,5 +111,5 @@ export function createBearishPatternCondition(): AtomicCondition {
  * Context must include `patterns.bullish` boolean.
  */
 export function createBullishPatternCondition(): AtomicCondition {
-  return new AtomicCondition('patterns.bullish', Operator.EQUAL, true, 'bullish_pattern_check');
+  return AtomicCondition.create('patterns.bullish', Operator.EQUAL, true, 'bullish_pattern_check');
 }

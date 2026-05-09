@@ -96,7 +96,7 @@ export function createLockInProfitStopTemplate(params: LockInProfitStopTemplateP
     : `${LOCK_IN_STOP_FACT_PREFIX}_${triggerR}R_to_${lockInR}R`;
 
   // Condition 1: Profit threshold reached
-  const profitCondition = new AtomicCondition(
+  const profitCondition = AtomicCondition.create(
     'currentR',
     Operator.GREATER_EQUAL,
     triggerR,
@@ -153,7 +153,7 @@ export function createLockInProfitStopTemplateWithExplicitPrice(
     ? `${LOCK_IN_STOP_FACT_PREFIX}_${ruleId}`
     : `${LOCK_IN_STOP_FACT_PREFIX}_${triggerR}R_to_${lockInR}R`;
 
-  const profitCondition = new AtomicCondition(
+  const profitCondition = AtomicCondition.create(
     'currentR',
     Operator.GREATER_EQUAL,
     triggerR,

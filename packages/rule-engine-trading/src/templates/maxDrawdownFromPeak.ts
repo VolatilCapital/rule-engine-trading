@@ -113,7 +113,7 @@ export function createMaxDrawdownFromPeakTemplate(
 
   // Condition 1: Peak R must have been reached
   conditions.push(
-    new AtomicCondition(
+    AtomicCondition.create(
       'peakR',
       Operator.GREATER_EQUAL,
       minPeakR,
@@ -123,7 +123,7 @@ export function createMaxDrawdownFromPeakTemplate(
 
   // Condition 2: Drawdown from peak exceeds threshold
   conditions.push(
-    new AtomicCondition(
+    AtomicCondition.create(
       'drawdownFromPeakR',
       Operator.GREATER_EQUAL,
       maxDrawdownR,
@@ -134,7 +134,7 @@ export function createMaxDrawdownFromPeakTemplate(
   // Condition 3: Optional minimum current R
   if (minCurrentR !== undefined) {
     conditions.push(
-      new AtomicCondition(
+      AtomicCondition.create(
         'currentR',
         Operator.GREATER_EQUAL,
         minCurrentR,

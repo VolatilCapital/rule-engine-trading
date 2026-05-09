@@ -144,7 +144,7 @@ export function createPatternBasedExitTemplate(
     if (patternNames.length === 1) {
       // Single pattern check
       conditions.push(
-        new AtomicCondition(
+        AtomicCondition.create(
           `patterns.${patternNames[0]}`,
           Operator.EQUAL,
           true,
@@ -155,7 +155,7 @@ export function createPatternBasedExitTemplate(
       // Multiple patterns: OR condition (any of them triggers)
       const patternConditions = patternNames.map(
         (name) =>
-          new AtomicCondition(
+          AtomicCondition.create(
             `patterns.${name}`,
             Operator.EQUAL,
             true,
@@ -163,7 +163,7 @@ export function createPatternBasedExitTemplate(
           )
       );
       conditions.push(
-        new LogicalCondition(
+        LogicalCondition.create(
           LogicalOperator.OR,
           patternConditions,
           'pattern_or_check'
@@ -173,7 +173,7 @@ export function createPatternBasedExitTemplate(
   } else {
     // General direction check
     conditions.push(
-      new AtomicCondition(
+      AtomicCondition.create(
         `patterns.${triggerDirection}`,
         Operator.EQUAL,
         true,
@@ -185,7 +185,7 @@ export function createPatternBasedExitTemplate(
   // Optional minimum profit condition
   if (minProfitR > 0) {
     conditions.push(
-      new AtomicCondition(
+      AtomicCondition.create(
         'currentR',
         Operator.GREATER_EQUAL,
         minProfitR,

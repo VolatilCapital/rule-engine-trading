@@ -69,7 +69,7 @@ export function createFreeTradeTemplate(params) {
         ? `${FREE_TRADE_FACT_PREFIX}_${ruleId}`
         : `${FREE_TRADE_FACT_PREFIX}_${triggerR}R`;
     // Condition 1: Profit threshold reached
-    const profitCondition = new AtomicCondition('currentR', Operator.GREATER_EQUAL, triggerR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
+    const profitCondition = AtomicCondition.create('currentR', Operator.GREATER_EQUAL, triggerR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
     // Combined condition: profit reached AND not already executed
     const mainCondition = createAndCondition([profitCondition, createNotExecutedCondition(factKey)], 'free_trade_condition');
     // Action: close calculated percentage

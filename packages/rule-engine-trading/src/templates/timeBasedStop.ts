@@ -82,7 +82,7 @@ export function createTimeBasedStopTemplate(params: TimeBasedStopTemplateParams)
     : `${TIME_STOP_FACT_PREFIX}_${maxMinutes}min_${minProfitR}R`;
 
   // Condition 1: Time elapsed
-  const timeCondition = new AtomicCondition(
+  const timeCondition = AtomicCondition.create(
     'elapsedMinutes',
     Operator.GREATER_EQUAL,
     maxMinutes,
@@ -90,7 +90,7 @@ export function createTimeBasedStopTemplate(params: TimeBasedStopTemplateParams)
   );
 
   // Condition 2: Profit NOT reached (we want to exit if profit is BELOW threshold)
-  const profitNotReachedCondition = new AtomicCondition(
+  const profitNotReachedCondition = AtomicCondition.create(
     'currentR',
     Operator.LESS_THAN,
     minProfitR,

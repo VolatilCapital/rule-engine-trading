@@ -42,49 +42,49 @@ function createMoveStopLossAction(params) {
 // dist/conditions/tradingConditions.js
 import { AtomicCondition, Operator, LogicalCondition, LogicalOperator, MemorizableCondition } from "rule-engine-monorepo/rule-engine";
 function createProfitThresholdCondition(thresholdR) {
-  return new AtomicCondition("currentR", Operator.GREATER_EQUAL, thresholdR, "currentR_check");
+  return AtomicCondition.create("currentR", Operator.GREATER_EQUAL, thresholdR, "currentR_check");
 }
 function createProfitBelowCondition(thresholdR) {
-  return new AtomicCondition("currentR", Operator.LESS_THAN, thresholdR, "currentR_below_check");
+  return AtomicCondition.create("currentR", Operator.LESS_THAN, thresholdR, "currentR_below_check");
 }
 function createNotExecutedCondition(factKey) {
-  return new AtomicCondition(`facts.${factKey}`, Operator.NOT_EQUAL, true, `${factKey}_not_executed_check`);
+  return AtomicCondition.create(`facts.${factKey}`, Operator.NOT_EQUAL, true, `${factKey}_not_executed_check`);
 }
 function createExecutedCondition(factKey) {
-  return new AtomicCondition(`facts.${factKey}`, Operator.EQUAL, true, `${factKey}_executed_check`);
+  return AtomicCondition.create(`facts.${factKey}`, Operator.EQUAL, true, `${factKey}_executed_check`);
 }
 function createAndCondition(conditions, conditionRef) {
-  return new LogicalCondition(LogicalOperator.AND, conditions, conditionRef);
+  return LogicalCondition.create(LogicalOperator.AND, conditions, conditionRef);
 }
 function createOrCondition(conditions, conditionRef) {
-  return new LogicalCondition(LogicalOperator.OR, conditions, conditionRef);
+  return LogicalCondition.create(LogicalOperator.OR, conditions, conditionRef);
 }
 function createHistoricalCondition(factKey) {
   return MemorizableCondition.create(factKey, createExecutedCondition(factKey));
 }
 function createPriceBelowCondition(price) {
-  return new AtomicCondition("currentPrice", Operator.LESS_EQUAL, price, "price_below_check");
+  return AtomicCondition.create("currentPrice", Operator.LESS_EQUAL, price, "price_below_check");
 }
 function createPriceAboveCondition(price) {
-  return new AtomicCondition("currentPrice", Operator.GREATER_EQUAL, price, "price_above_check");
+  return AtomicCondition.create("currentPrice", Operator.GREATER_EQUAL, price, "price_above_check");
 }
 function createTimeElapsedCondition(minutes) {
-  return new AtomicCondition("elapsedMinutes", Operator.GREATER_EQUAL, minutes, "time_elapsed_check");
+  return AtomicCondition.create("elapsedMinutes", Operator.GREATER_EQUAL, minutes, "time_elapsed_check");
 }
 function createPeakRReachedCondition(thresholdR) {
-  return new AtomicCondition("peakR", Operator.GREATER_EQUAL, thresholdR, "peakR_reached_check");
+  return AtomicCondition.create("peakR", Operator.GREATER_EQUAL, thresholdR, "peakR_reached_check");
 }
 function createDrawdownFromPeakCondition(drawdownR) {
-  return new AtomicCondition("drawdownFromPeakR", Operator.GREATER_EQUAL, drawdownR, "drawdown_from_peak_check");
+  return AtomicCondition.create("drawdownFromPeakR", Operator.GREATER_EQUAL, drawdownR, "drawdown_from_peak_check");
 }
 function createPatternDetectedCondition(patternName) {
-  return new AtomicCondition(`patterns.${patternName}`, Operator.EQUAL, true, `pattern_${patternName}_check`);
+  return AtomicCondition.create(`patterns.${patternName}`, Operator.EQUAL, true, `pattern_${patternName}_check`);
 }
 function createBearishPatternCondition() {
-  return new AtomicCondition("patterns.bearish", Operator.EQUAL, true, "bearish_pattern_check");
+  return AtomicCondition.create("patterns.bearish", Operator.EQUAL, true, "bearish_pattern_check");
 }
 function createBullishPatternCondition() {
-  return new AtomicCondition("patterns.bullish", Operator.EQUAL, true, "bullish_pattern_check");
+  return AtomicCondition.create("patterns.bullish", Operator.EQUAL, true, "bullish_pattern_check");
 }
 
 // dist/templates/moveSLToBreakeven.js
@@ -187,7 +187,7 @@ function createTakePartialTemplate(params) {
     throw new Error("closePercentage must be between 0 and 100");
   }
   const factKey = partialId ? `${PARTIAL_CLOSE_FACT_PREFIX}_${partialId}` : `${PARTIAL_CLOSE_FACT_PREFIX}_${thresholdR}R`;
-  const profitCondition = new AtomicCondition2("currentR", Operator2.GREATER_EQUAL, thresholdR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
+  const profitCondition = AtomicCondition2.create("currentR", Operator2.GREATER_EQUAL, thresholdR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
   const mainCondition = createAndCondition([profitCondition, createNotExecutedCondition(factKey)], "main_condition");
   const action = createPartialCloseByPercentage({ percentage: closePercentage });
   const historicalCondition = createHistoricalCondition(factKey);
@@ -231,8 +231,8 @@ function createTimeBasedStopTemplate(params) {
     throw new Error("closePercentage must be between 0 and 100");
   }
   const factKey = ruleId ? `${TIME_STOP_FACT_PREFIX}_${ruleId}` : `${TIME_STOP_FACT_PREFIX}_${maxMinutes}min_${minProfitR}R`;
-  const timeCondition = new AtomicCondition3("elapsedMinutes", Operator3.GREATER_EQUAL, maxMinutes, "time_elapsed_check");
-  const profitNotReachedCondition = new AtomicCondition3("currentR", Operator3.LESS_THAN, minProfitR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
+  const timeCondition = AtomicCondition3.create("elapsedMinutes", Operator3.GREATER_EQUAL, maxMinutes, "time_elapsed_check");
+  const profitNotReachedCondition = AtomicCondition3.create("currentR", Operator3.LESS_THAN, minProfitR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
   const mainCondition = createAndCondition([timeCondition, profitNotReachedCondition, createNotExecutedCondition(factKey)], "time_based_stop_condition");
   const action = closePercentage === 100 ? createClosePositionAction() : createPartialCloseByPercentage({ percentage: closePercentage });
   const historicalCondition = createHistoricalCondition(factKey);
@@ -270,7 +270,7 @@ function createFreeTradeTemplate(params) {
   }
   const closePercentage = calculateClosePercentage(triggerR, rToRecover);
   const factKey = ruleId ? `${FREE_TRADE_FACT_PREFIX}_${ruleId}` : `${FREE_TRADE_FACT_PREFIX}_${triggerR}R`;
-  const profitCondition = new AtomicCondition4("currentR", Operator4.GREATER_EQUAL, triggerR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
+  const profitCondition = AtomicCondition4.create("currentR", Operator4.GREATER_EQUAL, triggerR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
   const mainCondition = createAndCondition([profitCondition, createNotExecutedCondition(factKey)], "free_trade_condition");
   const action = createPartialCloseByPercentage({ percentage: closePercentage });
   const historicalCondition = createHistoricalCondition(factKey);
@@ -308,7 +308,7 @@ function createLockInProfitStopTemplate(params) {
     throw new Error(`lockInR (${lockInR}) must be < triggerR (${triggerR})`);
   }
   const factKey = ruleId ? `${LOCK_IN_STOP_FACT_PREFIX}_${ruleId}` : `${LOCK_IN_STOP_FACT_PREFIX}_${triggerR}R_to_${lockInR}R`;
-  const profitCondition = new AtomicCondition5("currentR", Operator5.GREATER_EQUAL, triggerR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
+  const profitCondition = AtomicCondition5.create("currentR", Operator5.GREATER_EQUAL, triggerR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
   const mainCondition = createAndCondition([profitCondition, createNotExecutedCondition(factKey)], "lock_in_profit_stop_condition");
   const action = createMoveStopLossAction({
     newStopPrice: { "var": `lockInStopPrice_${lockInR}R` }
@@ -328,7 +328,7 @@ function createLockInProfitStopTemplateWithExplicitPrice(params) {
     throw new Error(`lockInR (${lockInR}) must be < triggerR (${triggerR})`);
   }
   const factKey = ruleId ? `${LOCK_IN_STOP_FACT_PREFIX}_${ruleId}` : `${LOCK_IN_STOP_FACT_PREFIX}_${triggerR}R_to_${lockInR}R`;
-  const profitCondition = new AtomicCondition5("currentR", Operator5.GREATER_EQUAL, triggerR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
+  const profitCondition = AtomicCondition5.create("currentR", Operator5.GREATER_EQUAL, triggerR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
   const mainCondition = createAndCondition([profitCondition, createNotExecutedCondition(factKey)], "lock_in_profit_stop_condition");
   const action = createMoveStopLossAction({
     newStopPrice: { "var": stopPriceField }
@@ -373,10 +373,10 @@ function createMaxDrawdownFromPeakTemplate(params) {
   }
   const factKey = ruleId ? `${MAX_DRAWDOWN_FACT_PREFIX}_${ruleId}` : `${MAX_DRAWDOWN_FACT_PREFIX}_peak${minPeakR}R_dd${maxDrawdownR}R`;
   const conditions = [];
-  conditions.push(new AtomicCondition6("peakR", Operator6.GREATER_EQUAL, minPeakR, "peak_r_check"));
-  conditions.push(new AtomicCondition6("drawdownFromPeakR", Operator6.GREATER_EQUAL, maxDrawdownR, "drawdown_from_peak_check"));
+  conditions.push(AtomicCondition6.create("peakR", Operator6.GREATER_EQUAL, minPeakR, "peak_r_check"));
+  conditions.push(AtomicCondition6.create("drawdownFromPeakR", Operator6.GREATER_EQUAL, maxDrawdownR, "drawdown_from_peak_check"));
   if (minCurrentR !== void 0) {
-    conditions.push(new AtomicCondition6("currentR", Operator6.GREATER_EQUAL, minCurrentR, "min_current_r_check"));
+    conditions.push(AtomicCondition6.create("currentR", Operator6.GREATER_EQUAL, minCurrentR, "min_current_r_check"));
   }
   const mainCondition = createAndCondition([...conditions, createNotExecutedCondition(factKey)], "max_drawdown_from_peak_condition");
   const action = closePercentage === 100 ? createClosePositionAction() : createPartialCloseByPercentage({ percentage: closePercentage });
@@ -420,16 +420,16 @@ function createPatternBasedExitTemplate(params) {
   const conditions = [];
   if (patternNames && patternNames.length > 0) {
     if (patternNames.length === 1) {
-      conditions.push(new AtomicCondition7(`patterns.${patternNames[0]}`, Operator7.EQUAL, true, `pattern_${patternNames[0]}_check`));
+      conditions.push(AtomicCondition7.create(`patterns.${patternNames[0]}`, Operator7.EQUAL, true, `pattern_${patternNames[0]}_check`));
     } else {
-      const patternConditions = patternNames.map((name) => new AtomicCondition7(`patterns.${name}`, Operator7.EQUAL, true, `pattern_${name}_check`));
-      conditions.push(new LogicalCondition2(LogicalOperator2.OR, patternConditions, "pattern_or_check"));
+      const patternConditions = patternNames.map((name) => AtomicCondition7.create(`patterns.${name}`, Operator7.EQUAL, true, `pattern_${name}_check`));
+      conditions.push(LogicalCondition2.create(LogicalOperator2.OR, patternConditions, "pattern_or_check"));
     }
   } else {
-    conditions.push(new AtomicCondition7(`patterns.${triggerDirection}`, Operator7.EQUAL, true, `${triggerDirection}_pattern_check`));
+    conditions.push(AtomicCondition7.create(`patterns.${triggerDirection}`, Operator7.EQUAL, true, `${triggerDirection}_pattern_check`));
   }
   if (minProfitR > 0) {
-    conditions.push(new AtomicCondition7("currentR", Operator7.GREATER_EQUAL, minProfitR, "min_profit_check"));
+    conditions.push(AtomicCondition7.create("currentR", Operator7.GREATER_EQUAL, minProfitR, "min_profit_check"));
   }
   const mainCondition = createAndCondition([...conditions, createNotExecutedCondition(factKey)], "pattern_based_exit_condition");
   const action = closePercentage === 100 ? createClosePositionAction() : createPartialCloseByPercentage({ percentage: closePercentage });
@@ -532,7 +532,7 @@ function createTrailingStopTemplate(params) {
   if (activationR !== void 0 && activationR <= 0) {
     throw new Error(`activationR must be greater than 0 (got ${activationR})`);
   }
-  const condition = new AtomicCondition8("trailingShouldExecute", Operator8.EQUAL, 1, "trailing_should_execute");
+  const condition = AtomicCondition8.create("trailingShouldExecute", Operator8.EQUAL, 1, "trailing_should_execute");
   const action = createMoveStopLossAction({
     newStopPrice: { var: "trailingNewSL" }
   });

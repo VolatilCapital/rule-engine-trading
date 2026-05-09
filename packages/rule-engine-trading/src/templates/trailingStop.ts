@@ -78,7 +78,7 @@ export function createTrailingStopTemplate(params: TrailingStopParams): RuleTemp
 
   // Condition: trailingShouldExecute === 1
   // The context builder is responsible for computing this value.
-  const condition = new AtomicCondition(
+  const condition = AtomicCondition.create(
     'trailingShouldExecute',
     Operator.EQUAL,
     1,

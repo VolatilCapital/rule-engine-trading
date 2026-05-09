@@ -100,7 +100,7 @@ export function createFreeTradeTemplate(params: FreeTradeTemplateParams): RuleTe
     : `${FREE_TRADE_FACT_PREFIX}_${triggerR}R`;
 
   // Condition 1: Profit threshold reached
-  const profitCondition = new AtomicCondition(
+  const profitCondition = AtomicCondition.create(
     'currentR',
     Operator.GREATER_EQUAL,
     triggerR,

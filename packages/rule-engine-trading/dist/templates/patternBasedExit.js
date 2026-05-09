@@ -76,21 +76,21 @@ export function createPatternBasedExitTemplate(params) {
     if (patternNames && patternNames.length > 0) {
         if (patternNames.length === 1) {
             // Single pattern check
-            conditions.push(new AtomicCondition(`patterns.${patternNames[0]}`, Operator.EQUAL, true, `pattern_${patternNames[0]}_check`));
+            conditions.push(AtomicCondition.create(`patterns.${patternNames[0]}`, Operator.EQUAL, true, `pattern_${patternNames[0]}_check`));
         }
         else {
             // Multiple patterns: OR condition (any of them triggers)
-            const patternConditions = patternNames.map((name) => new AtomicCondition(`patterns.${name}`, Operator.EQUAL, true, `pattern_${name}_check`));
-            conditions.push(new LogicalCondition(LogicalOperator.OR, patternConditions, 'pattern_or_check'));
+            const patternConditions = patternNames.map((name) => AtomicCondition.create(`patterns.${name}`, Operator.EQUAL, true, `pattern_${name}_check`));
+            conditions.push(LogicalCondition.create(LogicalOperator.OR, patternConditions, 'pattern_or_check'));
         }
     }
     else {
         // General direction check
-        conditions.push(new AtomicCondition(`patterns.${triggerDirection}`, Operator.EQUAL, true, `${triggerDirection}_pattern_check`));
+        conditions.push(AtomicCondition.create(`patterns.${triggerDirection}`, Operator.EQUAL, true, `${triggerDirection}_pattern_check`));
     }
     // Optional minimum profit condition
     if (minProfitR > 0) {
-        conditions.push(new AtomicCondition('currentR', Operator.GREATER_EQUAL, minProfitR, 'min_profit_check'));
+        conditions.push(AtomicCondition.create('currentR', Operator.GREATER_EQUAL, minProfitR, 'min_profit_check'));
     }
     // Combined condition: all trading conditions AND not already executed
     const mainCondition = createAndCondition([...conditions, createNotExecutedCondition(factKey)], 'pattern_based_exit_condition');

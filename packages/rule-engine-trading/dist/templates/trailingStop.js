@@ -54,7 +54,7 @@ export function createTrailingStopTemplate(params) {
     }
     // Condition: trailingShouldExecute === 1
     // The context builder is responsible for computing this value.
-    const condition = new AtomicCondition('trailingShouldExecute', Operator.EQUAL, 1, 'trailing_should_execute');
+    const condition = AtomicCondition.create('trailingShouldExecute', Operator.EQUAL, 1, 'trailing_should_execute');
     // Action: move stop loss to the pre-computed trailingNewSL value
     const action = createMoveStopLossAction({
         newStopPrice: { var: 'trailingNewSL' },

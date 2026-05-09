@@ -64,12 +64,12 @@ export function createMaxDrawdownFromPeakTemplate(params) {
         : `${MAX_DRAWDOWN_FACT_PREFIX}_peak${minPeakR}R_dd${maxDrawdownR}R`;
     const conditions = [];
     // Condition 1: Peak R must have been reached
-    conditions.push(new AtomicCondition('peakR', Operator.GREATER_EQUAL, minPeakR, 'peak_r_check'));
+    conditions.push(AtomicCondition.create('peakR', Operator.GREATER_EQUAL, minPeakR, 'peak_r_check'));
     // Condition 2: Drawdown from peak exceeds threshold
-    conditions.push(new AtomicCondition('drawdownFromPeakR', Operator.GREATER_EQUAL, maxDrawdownR, 'drawdown_from_peak_check'));
+    conditions.push(AtomicCondition.create('drawdownFromPeakR', Operator.GREATER_EQUAL, maxDrawdownR, 'drawdown_from_peak_check'));
     // Condition 3: Optional minimum current R
     if (minCurrentR !== undefined) {
-        conditions.push(new AtomicCondition('currentR', Operator.GREATER_EQUAL, minCurrentR, 'min_current_r_check'));
+        conditions.push(AtomicCondition.create('currentR', Operator.GREATER_EQUAL, minCurrentR, 'min_current_r_check'));
     }
     // Combined condition: all trading conditions AND not already executed
     const mainCondition = createAndCondition([...conditions, createNotExecutedCondition(factKey)], 'max_drawdown_from_peak_condition');

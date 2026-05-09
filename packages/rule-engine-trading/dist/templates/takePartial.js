@@ -54,7 +54,7 @@ export function createTakePartialTemplate(params) {
         ? `${PARTIAL_CLOSE_FACT_PREFIX}_${partialId}`
         : `${PARTIAL_CLOSE_FACT_PREFIX}_${thresholdR}R`;
     // Condition 1: Profit threshold reached
-    const profitCondition = new AtomicCondition('currentR', Operator.GREATER_EQUAL, thresholdR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
+    const profitCondition = AtomicCondition.create('currentR', Operator.GREATER_EQUAL, thresholdR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
     // Combined condition: profit reached AND not already executed
     const mainCondition = createAndCondition([profitCondition, createNotExecutedCondition(factKey)], 'main_condition');
     // Action: close the specified percentage

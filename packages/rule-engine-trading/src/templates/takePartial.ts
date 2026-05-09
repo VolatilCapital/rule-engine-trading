@@ -77,7 +77,7 @@ export function createTakePartialTemplate(params: TakePartialTemplateParams): Ru
     : `${PARTIAL_CLOSE_FACT_PREFIX}_${thresholdR}R`;
 
   // Condition 1: Profit threshold reached
-  const profitCondition = new AtomicCondition(
+  const profitCondition = AtomicCondition.create(
     'currentR',
     Operator.GREATER_EQUAL,
     thresholdR,

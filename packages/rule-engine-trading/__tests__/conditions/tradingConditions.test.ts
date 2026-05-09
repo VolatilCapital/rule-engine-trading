@@ -12,7 +12,7 @@ describe('tradingConditions', () => {
     it('should create atomic condition with correct field and value', () => {
       const cond = createProfitThresholdCondition(2);
       expect(cond.field).toBe('currentR');
-      expect(cond.value).toBe(2);
+      expect(cond.value.rawValue).toBe(2);
     });
   });
 
@@ -43,7 +43,7 @@ describe('tradingConditions', () => {
     it('should create condition with currentPrice field', () => {
       const cond = createPriceBelowCondition(100);
       expect(cond.field).toBe('currentPrice');
-      expect(cond.value).toBe(100);
+      expect(cond.value.rawValue).toBe(100);
     });
   });
 });

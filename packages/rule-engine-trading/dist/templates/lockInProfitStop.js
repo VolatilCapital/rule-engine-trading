@@ -65,7 +65,7 @@ export function createLockInProfitStopTemplate(params) {
         ? `${LOCK_IN_STOP_FACT_PREFIX}_${ruleId}`
         : `${LOCK_IN_STOP_FACT_PREFIX}_${triggerR}R_to_${lockInR}R`;
     // Condition 1: Profit threshold reached
-    const profitCondition = new AtomicCondition('currentR', Operator.GREATER_EQUAL, triggerR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
+    const profitCondition = AtomicCondition.create('currentR', Operator.GREATER_EQUAL, triggerR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
     // Combined condition: profit reached AND not already executed
     const mainCondition = createAndCondition([profitCondition, createNotExecutedCondition(factKey)], 'lock_in_profit_stop_condition');
     // Action: move stop loss to lock in profit
@@ -102,7 +102,7 @@ export function createLockInProfitStopTemplateWithExplicitPrice(params) {
     const factKey = ruleId
         ? `${LOCK_IN_STOP_FACT_PREFIX}_${ruleId}`
         : `${LOCK_IN_STOP_FACT_PREFIX}_${triggerR}R_to_${lockInR}R`;
-    const profitCondition = new AtomicCondition('currentR', Operator.GREATER_EQUAL, triggerR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
+    const profitCondition = AtomicCondition.create('currentR', Operator.GREATER_EQUAL, triggerR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
     const mainCondition = createAndCondition([profitCondition, createNotExecutedCondition(factKey)], 'lock_in_profit_stop_condition');
     const action = createMoveStopLossAction({
         newStopPrice: { "var": stopPriceField }

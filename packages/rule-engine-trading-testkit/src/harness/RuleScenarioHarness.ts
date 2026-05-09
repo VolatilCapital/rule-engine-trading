@@ -22,7 +22,29 @@ import type { Position } from '@volatil/simulated-platform';
 
 import { TestActionExecutor, type TradingExecutionContext } from './TestActionExecutor.js';
 import { systemClock, type Clock } from './Clock.js';
-import { trailingStopParamsMap, type TrailingStopParams } from '@volatil/rule-engine-trading';
+import {
+  trailingStopParamsMap,
+  type TrailingStopParams,
+  lockInProfitStopParamsMap,
+  type LockInProfitStopTemplateParams,
+  type Unit,
+} from '@volatil/rule-engine-trading';
+
+/**
+ * Per-unit suffix used in the `lockInStopPrice_<value><unitSuffix>` context key.
+ * Mirrors the convention in `lockInProfitStop.ts`.
+ */
+const UNIT_SUFFIX: Record<Unit, string> = {
+  R: 'R',
+  percent: 'pct',
+  price: 'price',
+};
+
+/** Builds the canonical `lockInStopPrice_*` key for a given lock-in measurement. */
+function lockInStopPriceKey(lockIn: { value: number; unit: Unit }): string {
+  const valuePart = String(lockIn.value).replace(/\./g, '_');
+  return `lockInStopPrice_${valuePart}${UNIT_SUFFIX[lockIn.unit]}`;
+}
 
 /** Minimal set of facts the ContextProvider exposes to rule conditions. */
 export interface TradingContextFacts {
@@ -30,6 +52,16 @@ export interface TradingContextFacts {
   currentPrice: number;
   /** R-multiple: (currentPrice - entryPrice) / (entryPrice - stopLoss). Positive = profit. */
   currentR: number;
+  /**
+   * Side-aware, profit-positive percent move from entry (1.5 = +1.5 %).
+   * Positive when the trade is winning.
+   */
+  currentPctFromEntry: number;
+  /**
+   * Side-aware, profit-positive absolute price move from entry.
+   * Positive when the trade is winning.
+   */
+  currentPriceMove: number;
   /** Elapsed time since position opened, in minutes */
   elapsedMinutes: number;
   /** Peak R reached during the trade lifetime */
@@ -106,6 +138,8 @@ export class RuleScenarioHarness {
   #entryPrice: number | null = null;
   #initialSL: number | null = null;
   #openedAt: number | null = null;
+  /** Trade side. `+1` for BUY (long), `-1` for SELL (short). */
+  #sideSign: 1 | -1 = 1;
   #peakR = 0;
   #lastBid = 0;
   #lastAsk = 0;
@@ -120,6 +154,15 @@ export class RuleScenarioHarness {
    * stored in @volatil/rule-engine-trading.
    */
   readonly #trailingParams = new Map<string, TrailingStopParams>();
+
+  /**
+   * Maps rule instance id → LockInProfitStopTemplateParams for rules created
+   * with createLockInProfitStopTemplate. Populated in attachRule() via the
+   * WeakMap exported from @volatil/rule-engine-trading. The harness walks this
+   * map in #buildContext to pre-fill one `lockInStopPrice_<value><unitSuffix>`
+   * key per registered lock-in rule.
+   */
+  readonly #lockInRules = new Map<string, LockInProfitStopTemplateParams>();
 
   /**
    * Rule instance IDs whose trailing stop activation has been met at least once.
@@ -187,6 +230,7 @@ export class RuleScenarioHarness {
     this.#positionId = result.positionId;
     this.#entryPrice = opts.entry;
     this.#openedAt = this.#clock.now();
+    this.#sideSign = opts.side === 'BUY' ? 1 : -1;
     this.#peakR = 0;
 
     if (opts.sl !== undefined) {
@@ -242,6 +286,13 @@ export class RuleScenarioHarness {
     const trailingParams = trailingStopParamsMap.get(template);
     if (trailingParams !== undefined) {
       this.#trailingParams.set(instance.id, trailingParams);
+    }
+
+    // Detect lock-in profit stop templates so we can pre-fill the right
+    // `lockInStopPrice_*` context key in #buildContext.
+    const lockInParams = lockInProfitStopParamsMap.get(template);
+    if (lockInParams !== undefined) {
+      this.#lockInRules.set(instance.id, lockInParams);
     }
   }
 
@@ -326,6 +377,13 @@ export class RuleScenarioHarness {
     const currentPrice = this.#lastBid;
     const entryPrice = this.#entryPrice ?? currentPrice;
     const initialSL = this.#initialSL;
+    const sign = this.#sideSign;
+
+    // Side-aware, profit-positive price move and percent from entry.
+    // sign = +1 for BUY (long), -1 for SELL (short).
+    const currentPriceMove = sign * (currentPrice - entryPrice);
+    const currentPctFromEntry =
+      entryPrice !== 0 ? (currentPriceMove / entryPrice) * 100 : 0;
 
     let currentR = 0;
     if (initialSL !== null && Math.abs(entryPrice - initialSL) > 0) {
@@ -341,15 +399,34 @@ export class RuleScenarioHarness {
     const pos = this.#openPosition();
     const quantity = pos ? pos.quantity.toNumber() : 0;
 
-    const lockInStops: Record<string, number> =
-      initialSL !== null && Math.abs(entryPrice - initialSL) > 0
-        ? Object.fromEntries(
-            [0.5, 1, 1.5, 2, 2.5, 3, 4, 5].map(r => [
-              `lockInStopPrice_${r}R`,
-              entryPrice + r * (entryPrice - initialSL),
-            ]),
-          )
-        : {};
+    // Pre-compute one `lockInStopPrice_<value><unitSuffix>` per registered
+    // lock-in rule. The price formula depends on the lock-in unit:
+    //   R       → entry + sign × value × |entry − initialSL|
+    //   percent → entry × (1 + sign × value / 100)
+    //   price   → entry + sign × value
+    const lockInStops: Record<string, number> = {};
+    for (const params of this.#lockInRules.values()) {
+      const { lockIn } = params;
+      const key = lockInStopPriceKey(lockIn);
+      let stopPrice: number;
+      switch (lockIn.unit) {
+        case 'R': {
+          if (initialSL === null || Math.abs(entryPrice - initialSL) === 0) continue;
+          const riskMagnitude = Math.abs(entryPrice - initialSL);
+          stopPrice = entryPrice + sign * lockIn.value * riskMagnitude;
+          break;
+        }
+        case 'percent': {
+          stopPrice = entryPrice * (1 + (sign * lockIn.value) / 100);
+          break;
+        }
+        case 'price': {
+          stopPrice = entryPrice + sign * lockIn.value;
+          break;
+        }
+      }
+      lockInStops[key] = stopPrice;
+    }
 
     // ── Trailing stop helpers ─────────────────────────────────────────────────
     // Computed only when ruleId maps to a trailing-stop rule.
@@ -406,6 +483,8 @@ export class RuleScenarioHarness {
       quantity,
       currentPrice,
       currentR,
+      currentPctFromEntry,
+      currentPriceMove,
       elapsedMinutes,
       peakR: this.#peakR,
       drawdownFromPeakR: Math.max(0, this.#peakR - currentR),

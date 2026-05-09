@@ -10,9 +10,10 @@
  */
 import { RuleTemplate, AtomicCondition, LogicalCondition, LogicalOperator, Operator, } from 'rule-engine-monorepo/rule-engine';
 import { TriggerType } from '../domain/TradingEnums.js';
+import { assertMeasurement } from '../domain/Measurement.js';
 import { createClosePositionAction } from '../actions/placeOrder.js';
 import { createPartialCloseByPercentage } from '../actions/partialClose.js';
-import { createNotExecutedCondition, createAndCondition, createHistoricalCondition } from '../conditions/tradingConditions.js';
+import { createNotExecutedCondition, createAndCondition, createHistoricalCondition, createProfitThresholdCondition, } from '../conditions/tradingConditions.js';
 /**
  * Fact key prefix for pattern-based exit.
  */
@@ -59,9 +60,12 @@ const PATTERN_EXIT_FACT_PREFIX = 'pattern_based_exit_executed';
  * ```
  */
 export function createPatternBasedExitTemplate(params) {
-    const { positionDirection, patternNames, minProfitR = 0, closePercentage = 100, timeframe, ruleId, } = params;
+    const { positionDirection, patternNames, minProfit, closePercentage = 100, timeframe, ruleId, } = params;
     if (closePercentage <= 0 || closePercentage > 100) {
         throw new Error('closePercentage must be between 0 and 100');
+    }
+    if (minProfit !== undefined) {
+        assertMeasurement('minProfit', minProfit);
     }
     // Determine which pattern direction triggers exit
     const triggerDirection = positionDirection === 'long' ? 'bearish' : 'bullish';
@@ -88,9 +92,9 @@ export function createPatternBasedExitTemplate(params) {
         // General direction check
         conditions.push(AtomicCondition.create(`patterns.${triggerDirection}`, Operator.EQUAL, true, `${triggerDirection}_pattern_check`));
     }
-    // Optional minimum profit condition
-    if (minProfitR > 0) {
-        conditions.push(AtomicCondition.create('currentR', Operator.GREATER_EQUAL, minProfitR, 'min_profit_check'));
+    // Optional minimum profit condition (unit-aware via createProfitThresholdCondition).
+    if (minProfit !== undefined) {
+        conditions.push(createProfitThresholdCondition(minProfit));
     }
     // Combined condition: all trading conditions AND not already executed
     const mainCondition = createAndCondition([...conditions, createNotExecutedCondition(factKey)], 'pattern_based_exit_condition');
@@ -137,7 +141,7 @@ export const PATTERN_EXIT_SHORT_ENGULFING = createPatternBasedExitTemplate({
  */
 export const PATTERN_EXIT_LONG_BEARISH_PROFITABLE = createPatternBasedExitTemplate({
     positionDirection: 'long',
-    minProfitR: 0.5,
+    minProfit: { value: 0.5, unit: 'R' },
     ruleId: 'long_bearish_profitable',
 });
 /**

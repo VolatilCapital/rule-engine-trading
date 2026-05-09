@@ -10,6 +10,7 @@
  */
 import { RuleTemplate } from 'rule-engine-monorepo/rule-engine';
 import { TriggerType } from '../domain/TradingEnums.js';
+import { type Measurement } from '../domain/Measurement.js';
 /**
  * Position direction for pattern matching.
  */
@@ -30,11 +31,11 @@ export interface PatternBasedExitTemplateParams {
      */
     patternNames?: string[];
     /**
-     * Minimum profit R before pattern exit is allowed.
+     * Minimum profit (in any supported unit) before pattern exit is allowed.
      * Prevents exiting at a loss due to pattern.
-     * Default: 0 (can exit at any profit level)
+     * Default: omitted (can exit at any profit level).
      */
-    minProfitR?: number;
+    minProfit?: Measurement;
     /**
      * Percentage to close (100 = full close, <100 = partial).
      * Default: 100

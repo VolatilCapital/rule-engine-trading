@@ -1,13 +1,24 @@
+/**
+ * @file moveSLToBreakeven.ts
+ * @description Template factory for "move stop-loss to breakeven" rules.
+ * Moves the SL to the entry price when profit reaches the configured threshold.
+ *
+ * Threshold is unit-aware via `Measurement` (R, percent, or absolute price move).
+ */
+
 import { RuleTemplate } from 'rule-engine-monorepo/rule-engine';
+import { assertMeasurement, type Measurement } from '../domain/Measurement.js';
 import { createMoveStopLossAction } from '../actions/moveStopLoss.js';
 import { createProfitThresholdCondition, createNotExecutedCondition, createAndCondition, createHistoricalCondition } from '../conditions/tradingConditions.js';
 
 export interface MoveSLToBreakevenTemplateParams {
-  thresholdR: number; // Seuil R pour déclencher (ex: 1.5, 3, 5)
+  /** Profit threshold to trigger the breakeven move. */
+  threshold: Measurement;
 }
 
 export function createMoveSLToBreakevenTemplate(params: MoveSLToBreakevenTemplateParams): RuleTemplate {
-  const { thresholdR } = params;
+  const { threshold } = params;
+  assertMeasurement('threshold', threshold);
 
   const actions = [
     createMoveStopLossAction({
@@ -20,7 +31,7 @@ export function createMoveSLToBreakevenTemplate(params: MoveSLToBreakevenTemplat
   ];
 
   const condition = createAndCondition([
-    createProfitThresholdCondition(thresholdR),
+    createProfitThresholdCondition(threshold),
     createNotExecutedCondition('sl_moved_to_breakeven')
   ], 'main_condition');
 

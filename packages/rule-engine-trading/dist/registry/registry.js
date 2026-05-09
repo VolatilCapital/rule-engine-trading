@@ -11,21 +11,21 @@ export const tradingRuleRegistry = {
     // ============================================================================
     // Stop Loss à breakeven
     // ============================================================================
-    'sl-breakeven-1.5r': createMoveSLToBreakevenTemplate({ thresholdR: 1.5 }),
-    'sl-breakeven-2r': createMoveSLToBreakevenTemplate({ thresholdR: 2 }),
-    'sl-breakeven-3r': createMoveSLToBreakevenTemplate({ thresholdR: 3 }),
+    'sl-breakeven-1.5r': createMoveSLToBreakevenTemplate({ threshold: { value: 1.5, unit: 'R' } }),
+    'sl-breakeven-2r': createMoveSLToBreakevenTemplate({ threshold: { value: 2, unit: 'R' } }),
+    'sl-breakeven-3r': createMoveSLToBreakevenTemplate({ threshold: { value: 3, unit: 'R' } }),
     // ============================================================================
     // Prise de bénéfices (Take Profit)
     // ============================================================================
-    'tp-2r': createTakeProfitTemplate({ thresholdR: 2 }),
-    'tp-3r': createTakeProfitTemplate({ thresholdR: 3 }),
-    'tp-5r': createTakeProfitTemplate({ thresholdR: 5 }),
+    'tp-2r': createTakeProfitTemplate({ threshold: { value: 2, unit: 'R' } }),
+    'tp-3r': createTakeProfitTemplate({ threshold: { value: 3, unit: 'R' } }),
+    'tp-5r': createTakeProfitTemplate({ threshold: { value: 5, unit: 'R' } }),
     // ============================================================================
     // Partial Take Profit
     // ============================================================================
-    'partial-1r-50pct': createTakePartialTemplate({ thresholdR: 1, closePercentage: 50, partialId: '1R_50pct' }),
-    'partial-2r-50pct': createTakePartialTemplate({ thresholdR: 2, closePercentage: 50, partialId: '2R_50pct' }),
-    'partial-1r-33pct': createTakePartialTemplate({ thresholdR: 1, closePercentage: 33.33, partialId: '1R_33pct' }),
+    'partial-1r-50pct': createTakePartialTemplate({ threshold: { value: 1, unit: 'R' }, closePercentage: 50, partialId: '1R_50pct' }),
+    'partial-2r-50pct': createTakePartialTemplate({ threshold: { value: 2, unit: 'R' }, closePercentage: 50, partialId: '2R_50pct' }),
+    'partial-1r-33pct': createTakePartialTemplate({ threshold: { value: 1, unit: 'R' }, closePercentage: 33.33, partialId: '1R_33pct' }),
     // ============================================================================
     // Time-based Stop (sortie si profit non atteint dans le temps)
     // ============================================================================
@@ -35,16 +35,16 @@ export const tradingRuleRegistry = {
     // ============================================================================
     // Free Trade (retirer le risque initial)
     // ============================================================================
-    'free-trade-2r': createFreeTradeTemplate({ triggerR: 2, ruleId: '2R' }),
-    'free-trade-3r': createFreeTradeTemplate({ triggerR: 3, ruleId: '3R' }),
-    'free-trade-1.5r': createFreeTradeTemplate({ triggerR: 1.5, ruleId: '1_5R' }),
+    'free-trade-2r': createFreeTradeTemplate({ trigger: { value: 2, unit: 'R' }, recover: { value: 1, unit: 'R' }, ruleId: '2R' }),
+    'free-trade-3r': createFreeTradeTemplate({ trigger: { value: 3, unit: 'R' }, recover: { value: 1, unit: 'R' }, ruleId: '3R' }),
+    'free-trade-1.5r': createFreeTradeTemplate({ trigger: { value: 1.5, unit: 'R' }, recover: { value: 1, unit: 'R' }, ruleId: '1_5R' }),
     // ============================================================================
     // Lock-in Profit Stop (verrouillage du profit)
     // ============================================================================
-    'lock-3r-to-1r': createLockInProfitStopTemplate({ triggerR: 3, lockInR: 1, ruleId: '3R_to_1R' }),
-    'lock-2r-to-05r': createLockInProfitStopTemplate({ triggerR: 2, lockInR: 0.5, ruleId: '2R_to_05R' }),
-    'lock-4r-to-2r': createLockInProfitStopTemplate({ triggerR: 4, lockInR: 2, ruleId: '4R_to_2R' }),
-    'lock-5r-to-3r': createLockInProfitStopTemplate({ triggerR: 5, lockInR: 3, ruleId: '5R_to_3R' }),
+    'lock-3r-to-1r': createLockInProfitStopTemplate({ trigger: { value: 3, unit: 'R' }, lockIn: { value: 1, unit: 'R' }, ruleId: '3R_to_1R' }),
+    'lock-2r-to-05r': createLockInProfitStopTemplate({ trigger: { value: 2, unit: 'R' }, lockIn: { value: 0.5, unit: 'R' }, ruleId: '2R_to_05R' }),
+    'lock-4r-to-2r': createLockInProfitStopTemplate({ trigger: { value: 4, unit: 'R' }, lockIn: { value: 2, unit: 'R' }, ruleId: '4R_to_2R' }),
+    'lock-5r-to-3r': createLockInProfitStopTemplate({ trigger: { value: 5, unit: 'R' }, lockIn: { value: 3, unit: 'R' }, ruleId: '5R_to_3R' }),
     // ============================================================================
     // Max Drawdown from Peak (protection contre retournements)
     // ============================================================================
@@ -57,6 +57,6 @@ export const tradingRuleRegistry = {
     'pattern-exit-long-bearish': createPatternBasedExitTemplate({ positionDirection: 'long', ruleId: 'long_bearish' }),
     'pattern-exit-short-bullish': createPatternBasedExitTemplate({ positionDirection: 'short', ruleId: 'short_bullish' }),
     'pattern-exit-long-engulfing': createPatternBasedExitTemplate({ positionDirection: 'long', patternNames: ['engulfing_bearish'], ruleId: 'long_engulfing' }),
-    'pattern-exit-long-profitable': createPatternBasedExitTemplate({ positionDirection: 'long', minProfitR: 0.5, ruleId: 'long_bearish_profitable' }),
+    'pattern-exit-long-profitable': createPatternBasedExitTemplate({ positionDirection: 'long', minProfit: { value: 0.5, unit: 'R' }, ruleId: 'long_bearish_profitable' }),
 };
 //# sourceMappingURL=registry.js.map

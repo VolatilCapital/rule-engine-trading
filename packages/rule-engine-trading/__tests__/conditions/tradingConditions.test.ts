@@ -9,10 +9,22 @@ import {
 
 describe('tradingConditions', () => {
   describe('createProfitThresholdCondition', () => {
-    it('should create atomic condition with correct field and value', () => {
-      const cond = createProfitThresholdCondition(2);
+    it('should create atomic condition on currentR for unit R', () => {
+      const cond = createProfitThresholdCondition({ value: 2, unit: 'R' });
       expect(cond.field).toBe('currentR');
       expect(cond.value.rawValue).toBe(2);
+    });
+
+    it('should create atomic condition on currentPctFromEntry for unit percent', () => {
+      const cond = createProfitThresholdCondition({ value: 1.5, unit: 'percent' });
+      expect(cond.field).toBe('currentPctFromEntry');
+      expect(cond.value.rawValue).toBe(1.5);
+    });
+
+    it('should create atomic condition on currentPriceMove for unit price', () => {
+      const cond = createProfitThresholdCondition({ value: 0.5, unit: 'price' });
+      expect(cond.field).toBe('currentPriceMove');
+      expect(cond.value.rawValue).toBe(0.5);
     });
   });
 
@@ -25,7 +37,7 @@ describe('tradingConditions', () => {
 
   describe('createAndCondition', () => {
     it('should combine conditions with AND', () => {
-      const c1 = createProfitThresholdCondition(1);
+      const c1 = createProfitThresholdCondition({ value: 1, unit: 'R' });
       const c2 = createNotExecutedCondition('done');
       const combined = createAndCondition([c1, c2], 'combined');
       expect(combined.children).toHaveLength(2);

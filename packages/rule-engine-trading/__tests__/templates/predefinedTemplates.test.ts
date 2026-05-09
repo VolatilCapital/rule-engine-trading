@@ -7,18 +7,29 @@ import {
 
 describe('predefinedTemplates', () => {
   describe('SL_BREAKEVEN_TEMPLATE', () => {
-    it('should have correct structure', () => {
+    it('should have correct structure with split measurement params', () => {
       expect(SL_BREAKEVEN_TEMPLATE.id).toBe('sl-breakeven');
       expect(SL_BREAKEVEN_TEMPLATE.category).toBe('stop-loss');
-      expect(SL_BREAKEVEN_TEMPLATE.parameters).toHaveLength(1);
-      expect(SL_BREAKEVEN_TEMPLATE.parameters[0].name).toBe('thresholdR');
-      expect(SL_BREAKEVEN_TEMPLATE.parameters[0].default).toBe(2);
+      const names = SL_BREAKEVEN_TEMPLATE.parameters.map((p) => p.name);
+      expect(names).toContain('thresholdValue');
+      expect(names).toContain('thresholdUnit');
     });
 
-    it('should create template from definition', () => {
-      const template = SL_BREAKEVEN_TEMPLATE.create({ thresholdR: 1.5 });
+    it('should create template from flat params', () => {
+      const template = SL_BREAKEVEN_TEMPLATE.create({
+        thresholdValue: 1.5,
+        thresholdUnit: 'R',
+      });
       expect(template).toBeDefined();
       expect(template.actions.length).toBeGreaterThan(0);
+    });
+
+    it('should create template using percent unit', () => {
+      const template = SL_BREAKEVEN_TEMPLATE.create({
+        thresholdValue: 1.5,
+        thresholdUnit: 'percent',
+      });
+      expect(template).toBeDefined();
     });
   });
 
@@ -26,8 +37,9 @@ describe('predefinedTemplates', () => {
     it('should have correct structure', () => {
       expect(TP_TEMPLATE.id).toBe('take-profit');
       expect(TP_TEMPLATE.category).toBe('take-profit');
-      expect(TP_TEMPLATE.parameters[0].name).toBe('thresholdR');
-      expect(TP_TEMPLATE.parameters[0].default).toBe(3);
+      const names = TP_TEMPLATE.parameters.map((p) => p.name);
+      expect(names).toContain('thresholdValue');
+      expect(names).toContain('thresholdUnit');
     });
   });
 

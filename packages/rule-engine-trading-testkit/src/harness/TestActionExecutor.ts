@@ -23,6 +23,18 @@ export interface TradingExecutionContext {
   /** Position quantity (lots). 0 when no position is open. */
   quantity: number;
   currentPrice: number;
+  /**
+   * Side-aware, profit-positive percent move from entry. Positive when the
+   * trade is winning, negative when it is losing.
+   * Formula (adapter): `sign × (currentPrice − entryPrice) / entryPrice × 100`.
+   */
+  currentPctFromEntry: number;
+  /**
+   * Side-aware, profit-positive absolute price move from entry. Positive when
+   * the trade is winning, negative when it is losing.
+   * Formula (adapter): `sign × (currentPrice − entryPrice)`.
+   */
+  currentPriceMove: number;
   [key: string]: unknown;
 }
 

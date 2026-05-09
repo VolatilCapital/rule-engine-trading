@@ -1,11 +1,7 @@
 import { RuleTemplate } from 'rule-engine-monorepo/rule-engine';
-import { MoveSLToBreakevenTemplateParams } from './moveSLToBreakeven.js';
-import { TakeProfitTemplateParams } from './takeProfit.js';
+import type { Unit } from '../domain/Measurement.js';
 import { TimeBasedStopTemplateParams } from './timeBasedStop.js';
-import { FreeTradeTemplateParams } from './freeTrade.js';
-import { LockInProfitStopTemplateParams } from './lockInProfitStop.js';
 import { MaxDrawdownFromPeakTemplateParams } from './maxDrawdownFromPeak.js';
-import { PatternBasedExitTemplateParams } from './patternBasedExit.js';
 import { CancelPendingOnPriceLevelTemplateParams } from './cancelPendingOnPriceLevel.js';
 import { PartialCloseAtPriceTemplateParams } from './partialCloseAtPrice.js';
 import { TrailingStopParams } from './trailingStop.js';
@@ -33,9 +29,15 @@ export interface TemplateDefinition<T = any> {
      * aux valeurs acceptées par le moteur de règles.
      *
      * Exemple : options: ['below', 'above'] pour un paramètre de direction de prix.
+     *
+     * Multi-unit measurement parameters (`Measurement` in the factory params) are
+     * exposed flat as a `<name>Value: number` + `<name>Unit: 'R'|'percent'|'price'`
+     * pair so the form pipeline stays simple. The `create` wrapper reassembles them
+     * into a `Measurement` object before delegating to the factory.
      */
     parameters: Array<{
-        name: keyof T;
+        /** Field name on the *flat UI params*, not necessarily on the factory params. */
+        name: string;
         type: 'number' | 'string' | 'boolean';
         default: number | string | boolean;
         min?: number;
@@ -46,15 +48,47 @@ export interface TemplateDefinition<T = any> {
     }>;
     create: (params: T) => RuleTemplate;
 }
+interface SLBreakevenFlatParams {
+    thresholdValue: number;
+    thresholdUnit: Unit;
+}
+interface LockInFlatParams {
+    triggerValue: number;
+    triggerUnit: Unit;
+    lockInValue: number;
+    lockInUnit: Unit;
+    ruleId?: string;
+}
+interface TPFlatParams {
+    thresholdValue: number;
+    thresholdUnit: Unit;
+}
+interface FreeTradeFlatParams {
+    triggerValue: number;
+    triggerUnit: Unit;
+    recoverValue: number;
+    recoverUnit: Unit;
+    ruleId?: string;
+}
+interface PatternExitFlatParams {
+    positionDirection: 'long' | 'short';
+    minProfitValue: number;
+    minProfitUnit: Unit;
+    closePercentage: number;
+    patternNames?: string[];
+    timeframe?: string;
+    ruleId?: string;
+}
 export declare const TRAILING_STOP_TEMPLATE: TemplateDefinition<TrailingStopParams>;
-export declare const SL_BREAKEVEN_TEMPLATE: TemplateDefinition<MoveSLToBreakevenTemplateParams>;
-export declare const LOCK_IN_PROFIT_STOP_TEMPLATE: TemplateDefinition<LockInProfitStopTemplateParams>;
-export declare const TP_TEMPLATE: TemplateDefinition<TakeProfitTemplateParams>;
-export declare const FREE_TRADE_TEMPLATE: TemplateDefinition<FreeTradeTemplateParams>;
+export declare const SL_BREAKEVEN_TEMPLATE: TemplateDefinition<SLBreakevenFlatParams>;
+export declare const LOCK_IN_PROFIT_STOP_TEMPLATE: TemplateDefinition<LockInFlatParams>;
+export declare const TP_TEMPLATE: TemplateDefinition<TPFlatParams>;
+export declare const FREE_TRADE_TEMPLATE: TemplateDefinition<FreeTradeFlatParams>;
 export declare const TIME_BASED_STOP_TEMPLATE: TemplateDefinition<TimeBasedStopTemplateParams>;
 export declare const MAX_DRAWDOWN_FROM_PEAK_TEMPLATE: TemplateDefinition<MaxDrawdownFromPeakTemplateParams>;
-export declare const PATTERN_BASED_EXIT_TEMPLATE: TemplateDefinition<PatternBasedExitTemplateParams>;
+export declare const PATTERN_BASED_EXIT_TEMPLATE: TemplateDefinition<PatternExitFlatParams>;
 export declare const CANCEL_PENDING_ON_PRICE_LEVEL_TEMPLATE: TemplateDefinition<CancelPendingOnPriceLevelTemplateParams>;
 export declare const PARTIAL_CLOSE_AT_PRICE_TEMPLATE: TemplateDefinition<PartialCloseAtPriceTemplateParams>;
 export declare const templateDefinitions: Record<string, TemplateDefinition>;
+export {};
 //# sourceMappingURL=predefinedTemplates.d.ts.map

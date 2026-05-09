@@ -7,7 +7,7 @@ describe('moveSLToBreakeven', () => {
     const sc = scenario('Move SL to breakeven at 1R profit')
       .platform({ symbol: 'EURUSD', leverage: 100, balance: 10_000 })
       .openPosition({ side: 'BUY', volume: 0.1, entry: 1.0500, sl: 1.0480 })
-      .attachRule(createMoveSLToBreakevenTemplate({ thresholdR: 1 }))
+      .attachRule(createMoveSLToBreakevenTemplate({ threshold: { value: 1, unit: 'R' } }))
       .priceTo(1.0510)
       .expectStopLossAt(1.0480)
       .priceTo(1.0520)

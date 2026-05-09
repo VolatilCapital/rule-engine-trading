@@ -1,6 +1,22 @@
 import { AtomicCondition, LogicalCondition, MemorizableCondition, ICondition } from 'rule-engine-monorepo/rule-engine';
-export declare function createProfitThresholdCondition(thresholdR: number): AtomicCondition;
-export declare function createProfitBelowCondition(thresholdR: number): AtomicCondition;
+import { type Measurement } from '../domain/Measurement.js';
+/**
+ * Creates a "profit-from-entry >= threshold" atomic condition.
+ *
+ * The context field is selected from `PROFIT_FIELD[threshold.unit]`:
+ * - `R`     → `currentR`
+ * - `percent` → `currentPctFromEntry`
+ * - `price` → `currentPriceMove`
+ *
+ * The adapter (harness or production context builder) is responsible for
+ * populating the chosen field side-awarely (positive when winning).
+ */
+export declare function createProfitThresholdCondition(threshold: Measurement): AtomicCondition;
+/**
+ * Creates a "profit-from-entry < threshold" atomic condition.
+ * Same field selection rules as `createProfitThresholdCondition`.
+ */
+export declare function createProfitBelowCondition(threshold: Measurement): AtomicCondition;
 export declare function createNotExecutedCondition(factKey: string): AtomicCondition;
 export declare function createExecutedCondition(factKey: string): AtomicCondition;
 export declare function createAndCondition(conditions: ICondition[], conditionRef: string): LogicalCondition;

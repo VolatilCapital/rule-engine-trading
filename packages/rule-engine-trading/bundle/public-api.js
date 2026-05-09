@@ -28,6 +28,43 @@ var ConditionReference;
   ConditionReference2["PRICE_LEVEL_REACHED"] = "PRICE_LEVEL_REACHED";
 })(ConditionReference || (ConditionReference = {}));
 
+// dist/domain/Measurement.js
+var PROFIT_FIELD = {
+  R: "currentR",
+  percent: "currentPctFromEntry",
+  price: "currentPriceMove"
+};
+var PEAK_FIELD = {
+  R: "peakR",
+  percent: "peakPctFromEntry",
+  price: "peakPriceMove"
+};
+var DRAWDOWN_FROM_PEAK_FIELD = {
+  R: "drawdownFromPeakR",
+  percent: "drawdownFromPeakPct",
+  price: "drawdownFromPeakPrice"
+};
+var ALLOWED_UNITS = ["R", "percent", "price"];
+function assertMeasurement(name, m, opts = {}) {
+  if (m === null || typeof m !== "object") {
+    throw new Error(`${name} must be a Measurement object { value, unit }`);
+  }
+  const candidate = m;
+  if (typeof candidate.value !== "number" || !Number.isFinite(candidate.value)) {
+    throw new Error(`${name}.value must be a finite number`);
+  }
+  if (typeof candidate.unit !== "string" || !ALLOWED_UNITS.includes(candidate.unit)) {
+    throw new Error(`${name}.unit must be one of R | percent | price`);
+  }
+  if (opts.allowZero === true) {
+    if (candidate.value < 0) {
+      throw new Error(`${name}.value must be >= 0 (got ${candidate.value})`);
+    }
+  } else if (candidate.value <= 0) {
+    throw new Error(`${name}.value must be > 0 (got ${candidate.value})`);
+  }
+}
+
 // dist/templates/moveSLToBreakeven.js
 import { RuleTemplate } from "rule-engine-monorepo/rule-engine";
 
@@ -41,11 +78,15 @@ function createMoveStopLossAction(params) {
 
 // dist/conditions/tradingConditions.js
 import { AtomicCondition, Operator, LogicalCondition, LogicalOperator, MemorizableCondition } from "rule-engine-monorepo/rule-engine";
-function createProfitThresholdCondition(thresholdR) {
-  return AtomicCondition.create("currentR", Operator.GREATER_EQUAL, thresholdR, "currentR_check");
+function createProfitThresholdCondition(threshold) {
+  assertMeasurement("threshold", threshold);
+  const field = PROFIT_FIELD[threshold.unit];
+  return AtomicCondition.create(field, Operator.GREATER_EQUAL, threshold.value, `${field}_check`);
 }
-function createProfitBelowCondition(thresholdR) {
-  return AtomicCondition.create("currentR", Operator.LESS_THAN, thresholdR, "currentR_below_check");
+function createProfitBelowCondition(threshold) {
+  assertMeasurement("threshold", threshold);
+  const field = PROFIT_FIELD[threshold.unit];
+  return AtomicCondition.create(field, Operator.LESS_THAN, threshold.value, `${field}_below_check`);
 }
 function createNotExecutedCondition(factKey) {
   return AtomicCondition.create(`facts.${factKey}`, Operator.NOT_EQUAL, true, `${factKey}_not_executed_check`);
@@ -89,7 +130,8 @@ function createBullishPatternCondition() {
 
 // dist/templates/moveSLToBreakeven.js
 function createMoveSLToBreakevenTemplate(params) {
-  const { thresholdR } = params;
+  const { threshold } = params;
+  assertMeasurement("threshold", threshold);
   const actions = [
     createMoveStopLossAction({
       newStopPrice: { "var": "entryPrice" }
@@ -99,7 +141,7 @@ function createMoveSLToBreakevenTemplate(params) {
     createHistoricalCondition("sl_moved_to_breakeven")
   ];
   const condition = createAndCondition([
-    createProfitThresholdCondition(thresholdR),
+    createProfitThresholdCondition(threshold),
     createNotExecutedCondition("sl_moved_to_breakeven")
   ], "main_condition");
   return RuleTemplate.create(condition, actions, historicalConditions);
@@ -123,7 +165,8 @@ function createClosePositionAction() {
 
 // dist/templates/takeProfit.js
 function createTakeProfitTemplate(params) {
-  const { thresholdR } = params;
+  const { threshold } = params;
+  assertMeasurement("threshold", threshold);
   const actions = [
     createClosePositionAction()
   ];
@@ -131,14 +174,14 @@ function createTakeProfitTemplate(params) {
     createHistoricalCondition("position_closed_for_profit")
   ];
   const condition = createAndCondition([
-    createProfitThresholdCondition(thresholdR),
+    createProfitThresholdCondition(threshold),
     createNotExecutedCondition("position_closed_for_profit")
   ], "main_condition");
   return RuleTemplate2.create(condition, actions, historicalConditions);
 }
 
 // dist/templates/takePartial.js
-import { RuleTemplate as RuleTemplate3, AtomicCondition as AtomicCondition2, Operator as Operator2 } from "rule-engine-monorepo/rule-engine";
+import { RuleTemplate as RuleTemplate3 } from "rule-engine-monorepo/rule-engine";
 
 // dist/actions/partialClose.js
 function createPartialCloseByQuantity(params) {
@@ -179,48 +222,45 @@ var PARTIAL_CLOSE_33_PERCENT = createPartialCloseByPercentage({ percentage: 33.3
 // dist/templates/takePartial.js
 var PARTIAL_CLOSE_FACT_PREFIX = "partial_close_done";
 function createTakePartialTemplate(params) {
-  const { thresholdR, closePercentage, partialId } = params;
-  if (thresholdR <= 0) {
-    throw new Error("thresholdR must be greater than 0");
-  }
+  const { threshold, closePercentage, partialId } = params;
+  assertMeasurement("threshold", threshold);
   if (closePercentage <= 0 || closePercentage > 100) {
     throw new Error("closePercentage must be between 0 and 100");
   }
-  const factKey = partialId ? `${PARTIAL_CLOSE_FACT_PREFIX}_${partialId}` : `${PARTIAL_CLOSE_FACT_PREFIX}_${thresholdR}R`;
-  const profitCondition = AtomicCondition2.create("currentR", Operator2.GREATER_EQUAL, thresholdR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
-  const mainCondition = createAndCondition([profitCondition, createNotExecutedCondition(factKey)], "main_condition");
+  const factKey = partialId ? `${PARTIAL_CLOSE_FACT_PREFIX}_${partialId}` : `${PARTIAL_CLOSE_FACT_PREFIX}_${threshold.value}${threshold.unit}`;
+  const mainCondition = createAndCondition([createProfitThresholdCondition(threshold), createNotExecutedCondition(factKey)], "main_condition");
   const action = createPartialCloseByPercentage({ percentage: closePercentage });
   const historicalCondition = createHistoricalCondition(factKey);
   return RuleTemplate3.create(mainCondition, [action], [historicalCondition]);
 }
 var TAKE_PARTIAL_1R_50PCT = createTakePartialTemplate({
-  thresholdR: 1,
+  threshold: { value: 1, unit: "R" },
   closePercentage: 50,
   partialId: "1R_50pct"
 });
 var TAKE_PARTIAL_1R_33PCT = createTakePartialTemplate({
-  thresholdR: 1,
+  threshold: { value: 1, unit: "R" },
   closePercentage: 33.33,
   partialId: "1R_33pct"
 });
 var TAKE_PARTIAL_2R_50PCT = createTakePartialTemplate({
-  thresholdR: 2,
+  threshold: { value: 2, unit: "R" },
   closePercentage: 50,
   partialId: "2R_50pct"
 });
 var TAKE_PARTIAL_1R_25PCT = createTakePartialTemplate({
-  thresholdR: 1,
+  threshold: { value: 1, unit: "R" },
   closePercentage: 25,
   partialId: "1R_25pct"
 });
 var TAKE_PARTIAL_2R_25PCT = createTakePartialTemplate({
-  thresholdR: 2,
+  threshold: { value: 2, unit: "R" },
   closePercentage: 25,
   partialId: "2R_25pct"
 });
 
 // dist/templates/timeBasedStop.js
-import { RuleTemplate as RuleTemplate4, AtomicCondition as AtomicCondition3, Operator as Operator3 } from "rule-engine-monorepo/rule-engine";
+import { RuleTemplate as RuleTemplate4, AtomicCondition as AtomicCondition2, Operator as Operator2 } from "rule-engine-monorepo/rule-engine";
 var TIME_STOP_FACT_PREFIX = "time_based_stop_executed";
 function createTimeBasedStopTemplate(params) {
   const { maxMinutes, minProfitR, closePercentage = 100, ruleId } = params;
@@ -231,8 +271,8 @@ function createTimeBasedStopTemplate(params) {
     throw new Error("closePercentage must be between 0 and 100");
   }
   const factKey = ruleId ? `${TIME_STOP_FACT_PREFIX}_${ruleId}` : `${TIME_STOP_FACT_PREFIX}_${maxMinutes}min_${minProfitR}R`;
-  const timeCondition = AtomicCondition3.create("elapsedMinutes", Operator3.GREATER_EQUAL, maxMinutes, "time_elapsed_check");
-  const profitNotReachedCondition = AtomicCondition3.create("currentR", Operator3.LESS_THAN, minProfitR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
+  const timeCondition = AtomicCondition2.create("elapsedMinutes", Operator2.GREATER_EQUAL, maxMinutes, "time_elapsed_check");
+  const profitNotReachedCondition = AtomicCondition2.create("currentR", Operator2.LESS_THAN, minProfitR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
   const mainCondition = createAndCondition([timeCondition, profitNotReachedCondition, createNotExecutedCondition(factKey)], "time_based_stop_condition");
   const action = closePercentage === 100 ? createClosePositionAction() : createPartialCloseByPercentage({ percentage: closePercentage });
   const historicalCondition = createHistoricalCondition(factKey);
@@ -255,110 +295,103 @@ var TIME_STOP_60MIN_2R = createTimeBasedStopTemplate({
 });
 
 // dist/templates/freeTrade.js
-import { RuleTemplate as RuleTemplate5, AtomicCondition as AtomicCondition4, Operator as Operator4 } from "rule-engine-monorepo/rule-engine";
+import { RuleTemplate as RuleTemplate5 } from "rule-engine-monorepo/rule-engine";
 var FREE_TRADE_FACT_PREFIX = "free_trade_executed";
-function calculateClosePercentage(triggerR, rToRecover) {
-  return rToRecover / triggerR * 100;
-}
 function createFreeTradeTemplate(params) {
-  const { triggerR, rToRecover = 1, ruleId } = params;
-  if (triggerR < rToRecover) {
-    throw new Error(`triggerR (${triggerR}) must be >= rToRecover (${rToRecover})`);
+  const { trigger, recover, ruleId } = params;
+  assertMeasurement("trigger", trigger);
+  assertMeasurement("recover", recover);
+  if (trigger.unit !== recover.unit) {
+    throw new Error(`trigger and recover must share unit (got trigger=${trigger.unit}, recover=${recover.unit})`);
   }
-  if (rToRecover <= 0) {
-    throw new Error("rToRecover must be greater than 0");
+  if (trigger.value < recover.value) {
+    throw new Error(`trigger.value (${trigger.value}) must be >= recover.value (${recover.value})`);
   }
-  const closePercentage = calculateClosePercentage(triggerR, rToRecover);
-  const factKey = ruleId ? `${FREE_TRADE_FACT_PREFIX}_${ruleId}` : `${FREE_TRADE_FACT_PREFIX}_${triggerR}R`;
-  const profitCondition = AtomicCondition4.create("currentR", Operator4.GREATER_EQUAL, triggerR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
-  const mainCondition = createAndCondition([profitCondition, createNotExecutedCondition(factKey)], "free_trade_condition");
+  const closePercentage = recover.value / trigger.value * 100;
+  const factKey = ruleId ? `${FREE_TRADE_FACT_PREFIX}_${ruleId}` : `${FREE_TRADE_FACT_PREFIX}_${trigger.value}${trigger.unit}`;
+  const mainCondition = createAndCondition([createProfitThresholdCondition(trigger), createNotExecutedCondition(factKey)], "free_trade_condition");
   const action = createPartialCloseByPercentage({ percentage: closePercentage });
   const historicalCondition = createHistoricalCondition(factKey);
   return RuleTemplate5.create(mainCondition, [action], [historicalCondition]);
 }
 var FREE_TRADE_2R = createFreeTradeTemplate({
-  triggerR: 2,
+  trigger: { value: 2, unit: "R" },
+  recover: { value: 1, unit: "R" },
   ruleId: "2R"
 });
 var FREE_TRADE_3R = createFreeTradeTemplate({
-  triggerR: 3,
+  trigger: { value: 3, unit: "R" },
+  recover: { value: 1, unit: "R" },
   ruleId: "3R"
 });
 var FREE_TRADE_1_5R = createFreeTradeTemplate({
-  triggerR: 1.5,
+  trigger: { value: 1.5, unit: "R" },
+  recover: { value: 1, unit: "R" },
   ruleId: "1_5R"
 });
 var FREE_TRADE_4R = createFreeTradeTemplate({
-  triggerR: 4,
+  trigger: { value: 4, unit: "R" },
+  recover: { value: 1, unit: "R" },
   ruleId: "4R"
 });
 
 // dist/templates/lockInProfitStop.js
-import { RuleTemplate as RuleTemplate6, AtomicCondition as AtomicCondition5, Operator as Operator5 } from "rule-engine-monorepo/rule-engine";
+import { RuleTemplate as RuleTemplate6 } from "rule-engine-monorepo/rule-engine";
 var LOCK_IN_STOP_FACT_PREFIX = "lock_in_profit_stop_executed";
-function createLockInProfitStopTemplate(params) {
-  const { triggerR, lockInR, ruleId } = params;
-  if (triggerR <= 0) {
-    throw new Error("triggerR must be greater than 0");
-  }
-  if (lockInR < 0) {
-    throw new Error("lockInR must be >= 0");
-  }
-  if (lockInR >= triggerR) {
-    throw new Error(`lockInR (${lockInR}) must be < triggerR (${triggerR})`);
-  }
-  const factKey = ruleId ? `${LOCK_IN_STOP_FACT_PREFIX}_${ruleId}` : `${LOCK_IN_STOP_FACT_PREFIX}_${triggerR}R_to_${lockInR}R`;
-  const profitCondition = AtomicCondition5.create("currentR", Operator5.GREATER_EQUAL, triggerR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
-  const mainCondition = createAndCondition([profitCondition, createNotExecutedCondition(factKey)], "lock_in_profit_stop_condition");
-  const action = createMoveStopLossAction({
-    newStopPrice: { "var": `lockInStopPrice_${lockInR}R` }
-  });
-  const historicalCondition = createHistoricalCondition(factKey);
-  return RuleTemplate6.create(mainCondition, [action], [historicalCondition]);
+var lockInProfitStopParamsMap = /* @__PURE__ */ new WeakMap();
+var UNIT_SUFFIX = {
+  R: "R",
+  percent: "pct",
+  price: "price"
+};
+function lockInStopPriceKey(lockIn) {
+  const valuePart = String(lockIn.value).replace(/\./g, "_");
+  return `lockInStopPrice_${valuePart}${UNIT_SUFFIX[lockIn.unit]}`;
 }
-function createLockInProfitStopTemplateWithExplicitPrice(params) {
-  const { triggerR, lockInR, ruleId, stopPriceField } = params;
-  if (triggerR <= 0) {
-    throw new Error("triggerR must be greater than 0");
+function createLockInProfitStopTemplate(params) {
+  const { trigger, lockIn, ruleId } = params;
+  assertMeasurement("trigger", trigger);
+  assertMeasurement("lockIn", lockIn, { allowZero: true });
+  if (trigger.unit !== lockIn.unit) {
+    throw new Error(`trigger and lockIn must share unit (got trigger=${trigger.unit}, lockIn=${lockIn.unit})`);
   }
-  if (lockInR < 0) {
-    throw new Error("lockInR must be >= 0");
+  if (lockIn.value >= trigger.value) {
+    throw new Error(`lockIn.value (${lockIn.value}) must be < trigger.value (${trigger.value})`);
   }
-  if (lockInR >= triggerR) {
-    throw new Error(`lockInR (${lockInR}) must be < triggerR (${triggerR})`);
-  }
-  const factKey = ruleId ? `${LOCK_IN_STOP_FACT_PREFIX}_${ruleId}` : `${LOCK_IN_STOP_FACT_PREFIX}_${triggerR}R_to_${lockInR}R`;
-  const profitCondition = AtomicCondition5.create("currentR", Operator5.GREATER_EQUAL, triggerR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
+  const factKey = ruleId ? `${LOCK_IN_STOP_FACT_PREFIX}_${ruleId}` : `${LOCK_IN_STOP_FACT_PREFIX}_${trigger.value}${trigger.unit}_to_${lockIn.value}${lockIn.unit}`;
+  const profitCondition = createProfitThresholdCondition(trigger);
   const mainCondition = createAndCondition([profitCondition, createNotExecutedCondition(factKey)], "lock_in_profit_stop_condition");
   const action = createMoveStopLossAction({
-    newStopPrice: { "var": stopPriceField }
+    newStopPrice: { "var": lockInStopPriceKey(lockIn) }
   });
   const historicalCondition = createHistoricalCondition(factKey);
-  return RuleTemplate6.create(mainCondition, [action], [historicalCondition]);
+  const template = RuleTemplate6.create(mainCondition, [action], [historicalCondition]);
+  lockInProfitStopParamsMap.set(template, { trigger, lockIn, ruleId });
+  return template;
 }
 var LOCK_IN_3R_TO_1R = createLockInProfitStopTemplate({
-  triggerR: 3,
-  lockInR: 1,
+  trigger: { value: 3, unit: "R" },
+  lockIn: { value: 1, unit: "R" },
   ruleId: "3R_to_1R"
 });
 var LOCK_IN_2R_TO_05R = createLockInProfitStopTemplate({
-  triggerR: 2,
-  lockInR: 0.5,
+  trigger: { value: 2, unit: "R" },
+  lockIn: { value: 0.5, unit: "R" },
   ruleId: "2R_to_05R"
 });
 var LOCK_IN_4R_TO_2R = createLockInProfitStopTemplate({
-  triggerR: 4,
-  lockInR: 2,
+  trigger: { value: 4, unit: "R" },
+  lockIn: { value: 2, unit: "R" },
   ruleId: "4R_to_2R"
 });
 var LOCK_IN_5R_TO_3R = createLockInProfitStopTemplate({
-  triggerR: 5,
-  lockInR: 3,
+  trigger: { value: 5, unit: "R" },
+  lockIn: { value: 3, unit: "R" },
   ruleId: "5R_to_3R"
 });
 
 // dist/templates/maxDrawdownFromPeak.js
-import { RuleTemplate as RuleTemplate7, AtomicCondition as AtomicCondition6, Operator as Operator6 } from "rule-engine-monorepo/rule-engine";
+import { RuleTemplate as RuleTemplate7, AtomicCondition as AtomicCondition3, Operator as Operator3 } from "rule-engine-monorepo/rule-engine";
 var MAX_DRAWDOWN_FACT_PREFIX = "max_drawdown_from_peak_executed";
 function createMaxDrawdownFromPeakTemplate(params) {
   const { minPeakR, maxDrawdownR, minCurrentR, closePercentage = 100, ruleId } = params;
@@ -373,10 +406,10 @@ function createMaxDrawdownFromPeakTemplate(params) {
   }
   const factKey = ruleId ? `${MAX_DRAWDOWN_FACT_PREFIX}_${ruleId}` : `${MAX_DRAWDOWN_FACT_PREFIX}_peak${minPeakR}R_dd${maxDrawdownR}R`;
   const conditions = [];
-  conditions.push(AtomicCondition6.create("peakR", Operator6.GREATER_EQUAL, minPeakR, "peak_r_check"));
-  conditions.push(AtomicCondition6.create("drawdownFromPeakR", Operator6.GREATER_EQUAL, maxDrawdownR, "drawdown_from_peak_check"));
+  conditions.push(AtomicCondition3.create("peakR", Operator3.GREATER_EQUAL, minPeakR, "peak_r_check"));
+  conditions.push(AtomicCondition3.create("drawdownFromPeakR", Operator3.GREATER_EQUAL, maxDrawdownR, "drawdown_from_peak_check"));
   if (minCurrentR !== void 0) {
-    conditions.push(AtomicCondition6.create("currentR", Operator6.GREATER_EQUAL, minCurrentR, "min_current_r_check"));
+    conditions.push(AtomicCondition3.create("currentR", Operator3.GREATER_EQUAL, minCurrentR, "min_current_r_check"));
   }
   const mainCondition = createAndCondition([...conditions, createNotExecutedCondition(factKey)], "max_drawdown_from_peak_condition");
   const action = closePercentage === 100 ? createClosePositionAction() : createPartialCloseByPercentage({ percentage: closePercentage });
@@ -406,12 +439,15 @@ var MAX_DD_5R_PEAK_2R_DD_MIN_1R = createMaxDrawdownFromPeakTemplate({
 });
 
 // dist/templates/patternBasedExit.js
-import { RuleTemplate as RuleTemplate8, AtomicCondition as AtomicCondition7, LogicalCondition as LogicalCondition2, LogicalOperator as LogicalOperator2, Operator as Operator7 } from "rule-engine-monorepo/rule-engine";
+import { RuleTemplate as RuleTemplate8, AtomicCondition as AtomicCondition4, LogicalCondition as LogicalCondition2, LogicalOperator as LogicalOperator2, Operator as Operator4 } from "rule-engine-monorepo/rule-engine";
 var PATTERN_EXIT_FACT_PREFIX = "pattern_based_exit_executed";
 function createPatternBasedExitTemplate(params) {
-  const { positionDirection, patternNames, minProfitR = 0, closePercentage = 100, timeframe, ruleId } = params;
+  const { positionDirection, patternNames, minProfit, closePercentage = 100, timeframe, ruleId } = params;
   if (closePercentage <= 0 || closePercentage > 100) {
     throw new Error("closePercentage must be between 0 and 100");
+  }
+  if (minProfit !== void 0) {
+    assertMeasurement("minProfit", minProfit);
   }
   const triggerDirection = positionDirection === "long" ? "bearish" : "bullish";
   const patternSuffix = patternNames?.join("_") ?? triggerDirection;
@@ -420,16 +456,16 @@ function createPatternBasedExitTemplate(params) {
   const conditions = [];
   if (patternNames && patternNames.length > 0) {
     if (patternNames.length === 1) {
-      conditions.push(AtomicCondition7.create(`patterns.${patternNames[0]}`, Operator7.EQUAL, true, `pattern_${patternNames[0]}_check`));
+      conditions.push(AtomicCondition4.create(`patterns.${patternNames[0]}`, Operator4.EQUAL, true, `pattern_${patternNames[0]}_check`));
     } else {
-      const patternConditions = patternNames.map((name) => AtomicCondition7.create(`patterns.${name}`, Operator7.EQUAL, true, `pattern_${name}_check`));
+      const patternConditions = patternNames.map((name) => AtomicCondition4.create(`patterns.${name}`, Operator4.EQUAL, true, `pattern_${name}_check`));
       conditions.push(LogicalCondition2.create(LogicalOperator2.OR, patternConditions, "pattern_or_check"));
     }
   } else {
-    conditions.push(AtomicCondition7.create(`patterns.${triggerDirection}`, Operator7.EQUAL, true, `${triggerDirection}_pattern_check`));
+    conditions.push(AtomicCondition4.create(`patterns.${triggerDirection}`, Operator4.EQUAL, true, `${triggerDirection}_pattern_check`));
   }
-  if (minProfitR > 0) {
-    conditions.push(AtomicCondition7.create("currentR", Operator7.GREATER_EQUAL, minProfitR, "min_profit_check"));
+  if (minProfit !== void 0) {
+    conditions.push(createProfitThresholdCondition(minProfit));
   }
   const mainCondition = createAndCondition([...conditions, createNotExecutedCondition(factKey)], "pattern_based_exit_condition");
   const action = closePercentage === 100 ? createClosePositionAction() : createPartialCloseByPercentage({ percentage: closePercentage });
@@ -456,7 +492,7 @@ var PATTERN_EXIT_SHORT_ENGULFING = createPatternBasedExitTemplate({
 });
 var PATTERN_EXIT_LONG_BEARISH_PROFITABLE = createPatternBasedExitTemplate({
   positionDirection: "long",
-  minProfitR: 0.5,
+  minProfit: { value: 0.5, unit: "R" },
   ruleId: "long_bearish_profitable"
 });
 var PATTERN_EXIT_LONG_BEARISH_PARTIAL = createPatternBasedExitTemplate({
@@ -522,7 +558,7 @@ function createPartialCloseAtPriceTemplate(params) {
 }
 
 // dist/templates/trailingStop.js
-import { RuleTemplate as RuleTemplate11, AtomicCondition as AtomicCondition8, Operator as Operator8 } from "rule-engine-monorepo/rule-engine";
+import { RuleTemplate as RuleTemplate11, AtomicCondition as AtomicCondition5, Operator as Operator5 } from "rule-engine-monorepo/rule-engine";
 var trailingStopParamsMap = /* @__PURE__ */ new WeakMap();
 function createTrailingStopTemplate(params) {
   const { distance, activationR } = params;
@@ -532,7 +568,7 @@ function createTrailingStopTemplate(params) {
   if (activationR !== void 0 && activationR <= 0) {
     throw new Error(`activationR must be greater than 0 (got ${activationR})`);
   }
-  const condition = AtomicCondition8.create("trailingShouldExecute", Operator8.EQUAL, 1, "trailing_should_execute");
+  const condition = AtomicCondition5.create("trailingShouldExecute", Operator5.EQUAL, 1, "trailing_should_execute");
   const action = createMoveStopLossAction({
     newStopPrice: { var: "trailingNewSL" }
   });
@@ -542,6 +578,15 @@ function createTrailingStopTemplate(params) {
 }
 
 // dist/templates/predefinedTemplates.js
+var UNIT_OPTIONS = ["R", "percent", "price"];
+function readMeasurement(source, name) {
+  const value = source[`${name}Value`];
+  const unit = source[`${name}Unit`];
+  return {
+    value: typeof value === "number" ? value : Number(value),
+    unit
+  };
+}
 var TRAILING_STOP_TEMPLATE = {
   id: "trailing-stop",
   name: "Trailing Stop",
@@ -571,20 +616,31 @@ var TRAILING_STOP_TEMPLATE = {
 var SL_BREAKEVEN_TEMPLATE = {
   id: "sl-breakeven",
   name: "Stop-Loss to Breakeven",
-  description: "Move stop-loss to entry price when profit reaches a threshold (R multiple)",
+  description: "Move stop-loss to entry price when profit reaches a threshold (R, percent, or absolute price)",
   category: "stop-loss",
   maturity: "stable",
   parameters: [
     {
-      name: "thresholdR",
+      name: "thresholdValue",
       type: "number",
       default: 2,
-      min: 0.5,
-      max: 10,
-      description: "R threshold to trigger breakeven move"
+      min: 0,
+      description: "Profit threshold value to trigger breakeven move"
+    },
+    {
+      name: "thresholdUnit",
+      type: "string",
+      default: "R",
+      description: "Unit of the threshold",
+      options: [...UNIT_OPTIONS]
     }
   ],
-  create: createMoveSLToBreakevenTemplate
+  create: (flat) => {
+    const params = {
+      threshold: readMeasurement(flat, "threshold")
+    };
+    return createMoveSLToBreakevenTemplate(params);
+  }
 };
 var LOCK_IN_PROFIT_STOP_TEMPLATE = {
   id: "lock-in-profit-stop",
@@ -594,41 +650,73 @@ var LOCK_IN_PROFIT_STOP_TEMPLATE = {
   maturity: "stable",
   parameters: [
     {
-      name: "triggerR",
+      name: "triggerValue",
       type: "number",
       default: 3,
-      min: 1,
-      max: 20,
-      description: "R threshold to trigger the lock-in"
+      min: 0,
+      description: "Profit value that triggers the lock-in"
     },
     {
-      name: "lockInR",
+      name: "triggerUnit",
+      type: "string",
+      default: "R",
+      description: "Unit of the trigger",
+      options: [...UNIT_OPTIONS]
+    },
+    {
+      name: "lockInValue",
       type: "number",
       default: 1,
       min: 0,
-      max: 10,
-      description: "R level to lock in as guaranteed profit"
+      description: "Profit value to lock in (must share unit with trigger)"
+    },
+    {
+      name: "lockInUnit",
+      type: "string",
+      default: "R",
+      description: "Unit of the lock-in value",
+      options: [...UNIT_OPTIONS]
     }
   ],
-  create: createLockInProfitStopTemplate
+  create: (flat) => {
+    const source = flat;
+    const params = {
+      trigger: readMeasurement(source, "trigger"),
+      lockIn: readMeasurement(source, "lockIn")
+    };
+    if (flat.ruleId !== void 0)
+      params.ruleId = flat.ruleId;
+    return createLockInProfitStopTemplate(params);
+  }
 };
 var TP_TEMPLATE = {
   id: "take-profit",
   name: "Take Profit",
-  description: "Close position when profit reaches a target (R multiple)",
+  description: "Close position when profit reaches a target (R, percent, or absolute price)",
   category: "take-profit",
   maturity: "stable",
   parameters: [
     {
-      name: "thresholdR",
+      name: "thresholdValue",
       type: "number",
       default: 3,
-      min: 1,
-      max: 20,
-      description: "R target for taking profit"
+      min: 0,
+      description: "Profit target value"
+    },
+    {
+      name: "thresholdUnit",
+      type: "string",
+      default: "R",
+      description: "Unit of the threshold",
+      options: [...UNIT_OPTIONS]
     }
   ],
-  create: createTakeProfitTemplate
+  create: (flat) => {
+    const params = {
+      threshold: readMeasurement(flat, "threshold")
+    };
+    return createTakeProfitTemplate(params);
+  }
 };
 var FREE_TRADE_TEMPLATE = {
   id: "free-trade",
@@ -638,23 +726,44 @@ var FREE_TRADE_TEMPLATE = {
   maturity: "lab",
   parameters: [
     {
-      name: "triggerR",
+      name: "triggerValue",
       type: "number",
       default: 2,
-      min: 1,
-      max: 10,
-      description: "R threshold to trigger risk recovery"
+      min: 0,
+      description: "Profit value that triggers the risk recovery"
     },
     {
-      name: "rToRecover",
+      name: "triggerUnit",
+      type: "string",
+      default: "R",
+      description: "Unit of the trigger",
+      options: [...UNIT_OPTIONS]
+    },
+    {
+      name: "recoverValue",
       type: "number",
       default: 1,
-      min: 0.5,
-      max: 5,
-      description: "R amount to recover (typically 1 = initial risk)"
+      min: 0,
+      description: "Amount to recover (must share unit with trigger)"
+    },
+    {
+      name: "recoverUnit",
+      type: "string",
+      default: "R",
+      description: "Unit of the recover value",
+      options: [...UNIT_OPTIONS]
     }
   ],
-  create: createFreeTradeTemplate
+  create: (flat) => {
+    const source = flat;
+    const params = {
+      trigger: readMeasurement(source, "trigger"),
+      recover: readMeasurement(source, "recover")
+    };
+    if (flat.ruleId !== void 0)
+      params.ruleId = flat.ruleId;
+    return createFreeTradeTemplate(params);
+  }
 };
 var TIME_BASED_STOP_TEMPLATE = {
   id: "time-based-stop",
@@ -739,12 +848,18 @@ var PATTERN_BASED_EXIT_TEMPLATE = {
       options: ["long", "short"]
     },
     {
-      name: "minProfitR",
+      name: "minProfitValue",
       type: "number",
       default: 0,
       min: 0,
-      max: 10,
-      description: "Minimum profit R before pattern exit is allowed"
+      description: "Minimum profit value before pattern exit is allowed (0 = no minimum)"
+    },
+    {
+      name: "minProfitUnit",
+      type: "string",
+      default: "R",
+      description: "Unit of the minimum-profit threshold",
+      options: [...UNIT_OPTIONS]
     },
     {
       name: "closePercentage",
@@ -755,8 +870,22 @@ var PATTERN_BASED_EXIT_TEMPLATE = {
       description: "Percentage of position to close"
     }
   ],
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  create: createPatternBasedExitTemplate
+  create: (flat) => {
+    const params = {
+      positionDirection: flat.positionDirection,
+      closePercentage: flat.closePercentage
+    };
+    if (flat.minProfitValue > 0) {
+      params.minProfit = readMeasurement(flat, "minProfit");
+    }
+    if (flat.patternNames !== void 0)
+      params.patternNames = flat.patternNames;
+    if (flat.timeframe !== void 0)
+      params.timeframe = flat.timeframe;
+    if (flat.ruleId !== void 0)
+      params.ruleId = flat.ruleId;
+    return createPatternBasedExitTemplate(params);
+  }
 };
 var CANCEL_PENDING_ON_PRICE_LEVEL_TEMPLATE = {
   id: "cancel-pending-on-price-level",
@@ -848,22 +977,22 @@ var ACTIONS = {
   CANCEL_POSITION: createCancelPositionAction()
 };
 var CONDITIONS = {
-  PROFIT_1R: createProfitThresholdCondition(1),
-  PROFIT_1_5R: createProfitThresholdCondition(1.5),
-  PROFIT_2R: createProfitThresholdCondition(2),
-  PROFIT_3R: createProfitThresholdCondition(3),
-  PROFIT_5R: createProfitThresholdCondition(5),
+  PROFIT_1R: createProfitThresholdCondition({ value: 1, unit: "R" }),
+  PROFIT_1_5R: createProfitThresholdCondition({ value: 1.5, unit: "R" }),
+  PROFIT_2R: createProfitThresholdCondition({ value: 2, unit: "R" }),
+  PROFIT_3R: createProfitThresholdCondition({ value: 3, unit: "R" }),
+  PROFIT_5R: createProfitThresholdCondition({ value: 5, unit: "R" }),
   SL_NOT_MOVED: createNotExecutedCondition("sl_moved_to_breakeven"),
   POSITION_NOT_CLOSED: createNotExecutedCondition("position_closed_for_profit")
 };
 var TEMPLATES = {
-  SL_BREAKEVEN_1R: createMoveSLToBreakevenTemplate({ thresholdR: 1 }),
-  SL_BREAKEVEN_1_5R: createMoveSLToBreakevenTemplate({ thresholdR: 1.5 }),
-  SL_BREAKEVEN_2R: createMoveSLToBreakevenTemplate({ thresholdR: 2 }),
-  SL_BREAKEVEN_3R: createMoveSLToBreakevenTemplate({ thresholdR: 3 }),
-  TAKE_PROFIT_2R: createTakeProfitTemplate({ thresholdR: 2 }),
-  TAKE_PROFIT_3R: createTakeProfitTemplate({ thresholdR: 3 }),
-  TAKE_PROFIT_5R: createTakeProfitTemplate({ thresholdR: 5 })
+  SL_BREAKEVEN_1R: createMoveSLToBreakevenTemplate({ threshold: { value: 1, unit: "R" } }),
+  SL_BREAKEVEN_1_5R: createMoveSLToBreakevenTemplate({ threshold: { value: 1.5, unit: "R" } }),
+  SL_BREAKEVEN_2R: createMoveSLToBreakevenTemplate({ threshold: { value: 2, unit: "R" } }),
+  SL_BREAKEVEN_3R: createMoveSLToBreakevenTemplate({ threshold: { value: 3, unit: "R" } }),
+  TAKE_PROFIT_2R: createTakeProfitTemplate({ threshold: { value: 2, unit: "R" } }),
+  TAKE_PROFIT_3R: createTakeProfitTemplate({ threshold: { value: 3, unit: "R" } }),
+  TAKE_PROFIT_5R: createTakeProfitTemplate({ threshold: { value: 5, unit: "R" } })
 };
 
 // dist/registry/registry.js
@@ -871,21 +1000,21 @@ var tradingRuleRegistry = {
   // ============================================================================
   // Stop Loss à breakeven
   // ============================================================================
-  "sl-breakeven-1.5r": createMoveSLToBreakevenTemplate({ thresholdR: 1.5 }),
-  "sl-breakeven-2r": createMoveSLToBreakevenTemplate({ thresholdR: 2 }),
-  "sl-breakeven-3r": createMoveSLToBreakevenTemplate({ thresholdR: 3 }),
+  "sl-breakeven-1.5r": createMoveSLToBreakevenTemplate({ threshold: { value: 1.5, unit: "R" } }),
+  "sl-breakeven-2r": createMoveSLToBreakevenTemplate({ threshold: { value: 2, unit: "R" } }),
+  "sl-breakeven-3r": createMoveSLToBreakevenTemplate({ threshold: { value: 3, unit: "R" } }),
   // ============================================================================
   // Prise de bénéfices (Take Profit)
   // ============================================================================
-  "tp-2r": createTakeProfitTemplate({ thresholdR: 2 }),
-  "tp-3r": createTakeProfitTemplate({ thresholdR: 3 }),
-  "tp-5r": createTakeProfitTemplate({ thresholdR: 5 }),
+  "tp-2r": createTakeProfitTemplate({ threshold: { value: 2, unit: "R" } }),
+  "tp-3r": createTakeProfitTemplate({ threshold: { value: 3, unit: "R" } }),
+  "tp-5r": createTakeProfitTemplate({ threshold: { value: 5, unit: "R" } }),
   // ============================================================================
   // Partial Take Profit
   // ============================================================================
-  "partial-1r-50pct": createTakePartialTemplate({ thresholdR: 1, closePercentage: 50, partialId: "1R_50pct" }),
-  "partial-2r-50pct": createTakePartialTemplate({ thresholdR: 2, closePercentage: 50, partialId: "2R_50pct" }),
-  "partial-1r-33pct": createTakePartialTemplate({ thresholdR: 1, closePercentage: 33.33, partialId: "1R_33pct" }),
+  "partial-1r-50pct": createTakePartialTemplate({ threshold: { value: 1, unit: "R" }, closePercentage: 50, partialId: "1R_50pct" }),
+  "partial-2r-50pct": createTakePartialTemplate({ threshold: { value: 2, unit: "R" }, closePercentage: 50, partialId: "2R_50pct" }),
+  "partial-1r-33pct": createTakePartialTemplate({ threshold: { value: 1, unit: "R" }, closePercentage: 33.33, partialId: "1R_33pct" }),
   // ============================================================================
   // Time-based Stop (sortie si profit non atteint dans le temps)
   // ============================================================================
@@ -895,16 +1024,16 @@ var tradingRuleRegistry = {
   // ============================================================================
   // Free Trade (retirer le risque initial)
   // ============================================================================
-  "free-trade-2r": createFreeTradeTemplate({ triggerR: 2, ruleId: "2R" }),
-  "free-trade-3r": createFreeTradeTemplate({ triggerR: 3, ruleId: "3R" }),
-  "free-trade-1.5r": createFreeTradeTemplate({ triggerR: 1.5, ruleId: "1_5R" }),
+  "free-trade-2r": createFreeTradeTemplate({ trigger: { value: 2, unit: "R" }, recover: { value: 1, unit: "R" }, ruleId: "2R" }),
+  "free-trade-3r": createFreeTradeTemplate({ trigger: { value: 3, unit: "R" }, recover: { value: 1, unit: "R" }, ruleId: "3R" }),
+  "free-trade-1.5r": createFreeTradeTemplate({ trigger: { value: 1.5, unit: "R" }, recover: { value: 1, unit: "R" }, ruleId: "1_5R" }),
   // ============================================================================
   // Lock-in Profit Stop (verrouillage du profit)
   // ============================================================================
-  "lock-3r-to-1r": createLockInProfitStopTemplate({ triggerR: 3, lockInR: 1, ruleId: "3R_to_1R" }),
-  "lock-2r-to-05r": createLockInProfitStopTemplate({ triggerR: 2, lockInR: 0.5, ruleId: "2R_to_05R" }),
-  "lock-4r-to-2r": createLockInProfitStopTemplate({ triggerR: 4, lockInR: 2, ruleId: "4R_to_2R" }),
-  "lock-5r-to-3r": createLockInProfitStopTemplate({ triggerR: 5, lockInR: 3, ruleId: "5R_to_3R" }),
+  "lock-3r-to-1r": createLockInProfitStopTemplate({ trigger: { value: 3, unit: "R" }, lockIn: { value: 1, unit: "R" }, ruleId: "3R_to_1R" }),
+  "lock-2r-to-05r": createLockInProfitStopTemplate({ trigger: { value: 2, unit: "R" }, lockIn: { value: 0.5, unit: "R" }, ruleId: "2R_to_05R" }),
+  "lock-4r-to-2r": createLockInProfitStopTemplate({ trigger: { value: 4, unit: "R" }, lockIn: { value: 2, unit: "R" }, ruleId: "4R_to_2R" }),
+  "lock-5r-to-3r": createLockInProfitStopTemplate({ trigger: { value: 5, unit: "R" }, lockIn: { value: 3, unit: "R" }, ruleId: "5R_to_3R" }),
   // ============================================================================
   // Max Drawdown from Peak (protection contre retournements)
   // ============================================================================
@@ -917,7 +1046,7 @@ var tradingRuleRegistry = {
   "pattern-exit-long-bearish": createPatternBasedExitTemplate({ positionDirection: "long", ruleId: "long_bearish" }),
   "pattern-exit-short-bullish": createPatternBasedExitTemplate({ positionDirection: "short", ruleId: "short_bullish" }),
   "pattern-exit-long-engulfing": createPatternBasedExitTemplate({ positionDirection: "long", patternNames: ["engulfing_bearish"], ruleId: "long_engulfing" }),
-  "pattern-exit-long-profitable": createPatternBasedExitTemplate({ positionDirection: "long", minProfitR: 0.5, ruleId: "long_bearish_profitable" })
+  "pattern-exit-long-profitable": createPatternBasedExitTemplate({ positionDirection: "long", minProfit: { value: 0.5, unit: "R" }, ruleId: "long_bearish_profitable" })
 };
 
 // dist/schemas/actionSchemas.js
@@ -1195,6 +1324,7 @@ export {
   CANCEL_PENDING_ON_PRICE_LEVEL_TEMPLATE,
   CONDITIONS,
   ConditionReference,
+  DRAWDOWN_FROM_PEAK_FIELD,
   FREE_TRADE_1_5R,
   FREE_TRADE_2R,
   FREE_TRADE_3R,
@@ -1222,6 +1352,8 @@ export {
   PATTERN_EXIT_SHORT_BULLISH,
   PATTERN_EXIT_SHORT_ENGULFING,
   PATTERN_RULE_TRIGGER_TYPE,
+  PEAK_FIELD,
+  PROFIT_FIELD,
   SL_BREAKEVEN_TEMPLATE,
   TAKE_PARTIAL_1R_25PCT,
   TAKE_PARTIAL_1R_33PCT,
@@ -1237,6 +1369,7 @@ export {
   TRADING_CONTEXT_FIELDS,
   TRAILING_STOP_TEMPLATE,
   TriggerType,
+  assertMeasurement,
   barsSinceEntrySchema,
   cancelPositionSchema,
   createAndCondition,
@@ -1250,7 +1383,6 @@ export {
   createFreeTradeTemplate,
   createHistoricalCondition,
   createLockInProfitStopTemplate,
-  createLockInProfitStopTemplateWithExplicitPrice,
   createMaxDrawdownFromPeakTemplate,
   createMoveSLToBreakevenTemplate,
   createMoveStopLossAction,
@@ -1275,6 +1407,7 @@ export {
   createTradingSchemaRegistry,
   createTrailingStopTemplate,
   isTrailingSchema,
+  lockInProfitStopParamsMap,
   maxDrawdownSchema,
   moveStopLossSchema,
   partialCloseSchema,

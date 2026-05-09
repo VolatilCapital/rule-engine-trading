@@ -18,11 +18,11 @@ export const ACTIONS = {
 
 // Conditions prédéfinies
 export const CONDITIONS = {
-  PROFIT_1R: createProfitThresholdCondition(1),
-  PROFIT_1_5R: createProfitThresholdCondition(1.5),
-  PROFIT_2R: createProfitThresholdCondition(2),
-  PROFIT_3R: createProfitThresholdCondition(3),
-  PROFIT_5R: createProfitThresholdCondition(5),
+  PROFIT_1R: createProfitThresholdCondition({ value: 1, unit: 'R' }),
+  PROFIT_1_5R: createProfitThresholdCondition({ value: 1.5, unit: 'R' }),
+  PROFIT_2R: createProfitThresholdCondition({ value: 2, unit: 'R' }),
+  PROFIT_3R: createProfitThresholdCondition({ value: 3, unit: 'R' }),
+  PROFIT_5R: createProfitThresholdCondition({ value: 5, unit: 'R' }),
 
   SL_NOT_MOVED: createNotExecutedCondition('sl_moved_to_breakeven'),
   POSITION_NOT_CLOSED: createNotExecutedCondition('position_closed_for_profit')
@@ -30,12 +30,12 @@ export const CONDITIONS = {
 
 // Templates prédéfinis
 export const TEMPLATES = {
-  SL_BREAKEVEN_1R: createMoveSLToBreakevenTemplate({ thresholdR: 1 }),
-  SL_BREAKEVEN_1_5R: createMoveSLToBreakevenTemplate({ thresholdR: 1.5 }),
-  SL_BREAKEVEN_2R: createMoveSLToBreakevenTemplate({ thresholdR: 2 }),
-  SL_BREAKEVEN_3R: createMoveSLToBreakevenTemplate({ thresholdR: 3 }),
+  SL_BREAKEVEN_1R: createMoveSLToBreakevenTemplate({ threshold: { value: 1, unit: 'R' } }),
+  SL_BREAKEVEN_1_5R: createMoveSLToBreakevenTemplate({ threshold: { value: 1.5, unit: 'R' } }),
+  SL_BREAKEVEN_2R: createMoveSLToBreakevenTemplate({ threshold: { value: 2, unit: 'R' } }),
+  SL_BREAKEVEN_3R: createMoveSLToBreakevenTemplate({ threshold: { value: 3, unit: 'R' } }),
 
-  TAKE_PROFIT_2R: createTakeProfitTemplate({ thresholdR: 2 }),
-  TAKE_PROFIT_3R: createTakeProfitTemplate({ thresholdR: 3 }),
-  TAKE_PROFIT_5R: createTakeProfitTemplate({ thresholdR: 5 })
+  TAKE_PROFIT_2R: createTakeProfitTemplate({ threshold: { value: 2, unit: 'R' } }),
+  TAKE_PROFIT_3R: createTakeProfitTemplate({ threshold: { value: 3, unit: 'R' } }),
+  TAKE_PROFIT_5R: createTakeProfitTemplate({ threshold: { value: 5, unit: 'R' } })
 };

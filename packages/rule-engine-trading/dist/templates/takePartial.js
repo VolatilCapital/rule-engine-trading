@@ -3,10 +3,10 @@
  * @description Template factory for partial close rules.
  * Creates rules that close a percentage of the position when profit threshold is reached.
  */
-import { RuleTemplate, AtomicCondition, Operator, } from 'rule-engine-monorepo/rule-engine';
-import { ConditionReference } from '../domain/TradingEnums.js';
+import { RuleTemplate } from 'rule-engine-monorepo/rule-engine';
+import { assertMeasurement } from '../domain/Measurement.js';
 import { createPartialCloseByPercentage } from '../actions/partialClose.js';
-import { createNotExecutedCondition, createAndCondition, createHistoricalCondition } from '../conditions/tradingConditions.js';
+import { createProfitThresholdCondition, createNotExecutedCondition, createAndCondition, createHistoricalCondition, } from '../conditions/tradingConditions.js';
 /**
  * Fact key for tracking partial close execution.
  */
@@ -15,7 +15,7 @@ const PARTIAL_CLOSE_FACT_PREFIX = 'partial_close_done';
  * Creates a rule template for taking a partial close at a profit threshold.
  *
  * The rule:
- * - Triggers when currentR >= thresholdR AND partial not already taken
+ * - Triggers when profit (in chosen unit) reaches `threshold` AND partial not already taken
  * - Closes the specified percentage of the position
  * - Records a fact to prevent re-execution
  *
@@ -23,40 +23,23 @@ const PARTIAL_CLOSE_FACT_PREFIX = 'partial_close_done';
  * ```typescript
  * // Close 50% of position at 2R profit
  * const template = createTakePartialTemplate({
- *   thresholdR: 2,
+ *   threshold: { value: 2, unit: 'R' },
  *   closePercentage: 50,
- * });
- *
- * // Create multiple partials with unique IDs
- * const partial1 = createTakePartialTemplate({
- *   thresholdR: 1,
- *   closePercentage: 33,
- *   partialId: 'first_partial',
- * });
- *
- * const partial2 = createTakePartialTemplate({
- *   thresholdR: 2,
- *   closePercentage: 50,
- *   partialId: 'second_partial',
  * });
  * ```
  */
 export function createTakePartialTemplate(params) {
-    const { thresholdR, closePercentage, partialId } = params;
-    if (thresholdR <= 0) {
-        throw new Error('thresholdR must be greater than 0');
-    }
+    const { threshold, closePercentage, partialId } = params;
+    assertMeasurement('threshold', threshold);
     if (closePercentage <= 0 || closePercentage > 100) {
         throw new Error('closePercentage must be between 0 and 100');
     }
-    // Unique fact key for this partial
+    // Unique fact key
     const factKey = partialId
         ? `${PARTIAL_CLOSE_FACT_PREFIX}_${partialId}`
-        : `${PARTIAL_CLOSE_FACT_PREFIX}_${thresholdR}R`;
-    // Condition 1: Profit threshold reached
-    const profitCondition = AtomicCondition.create('currentR', Operator.GREATER_EQUAL, thresholdR, ConditionReference.PROFIT_RATIO_GREATER_EQUAL);
+        : `${PARTIAL_CLOSE_FACT_PREFIX}_${threshold.value}${threshold.unit}`;
     // Combined condition: profit reached AND not already executed
-    const mainCondition = createAndCondition([profitCondition, createNotExecutedCondition(factKey)], 'main_condition');
+    const mainCondition = createAndCondition([createProfitThresholdCondition(threshold), createNotExecutedCondition(factKey)], 'main_condition');
     // Action: close the specified percentage
     const action = createPartialCloseByPercentage({ percentage: closePercentage });
     // Historical condition (self-referencing: prevents Phase 1/Phase 2 ordering issue)
@@ -67,7 +50,7 @@ export function createTakePartialTemplate(params) {
  * Predefined template: Close 50% at 1R profit.
  */
 export const TAKE_PARTIAL_1R_50PCT = createTakePartialTemplate({
-    thresholdR: 1,
+    threshold: { value: 1, unit: 'R' },
     closePercentage: 50,
     partialId: '1R_50pct',
 });
@@ -75,7 +58,7 @@ export const TAKE_PARTIAL_1R_50PCT = createTakePartialTemplate({
  * Predefined template: Close 33% at 1R profit.
  */
 export const TAKE_PARTIAL_1R_33PCT = createTakePartialTemplate({
-    thresholdR: 1,
+    threshold: { value: 1, unit: 'R' },
     closePercentage: 33.33,
     partialId: '1R_33pct',
 });
@@ -83,7 +66,7 @@ export const TAKE_PARTIAL_1R_33PCT = createTakePartialTemplate({
  * Predefined template: Close 50% at 2R profit.
  */
 export const TAKE_PARTIAL_2R_50PCT = createTakePartialTemplate({
-    thresholdR: 2,
+    threshold: { value: 2, unit: 'R' },
     closePercentage: 50,
     partialId: '2R_50pct',
 });
@@ -91,12 +74,12 @@ export const TAKE_PARTIAL_2R_50PCT = createTakePartialTemplate({
  * Predefined template: Close 25% at 1R, then 25% at 2R (use both templates).
  */
 export const TAKE_PARTIAL_1R_25PCT = createTakePartialTemplate({
-    thresholdR: 1,
+    threshold: { value: 1, unit: 'R' },
     closePercentage: 25,
     partialId: '1R_25pct',
 });
 export const TAKE_PARTIAL_2R_25PCT = createTakePartialTemplate({
-    thresholdR: 2,
+    threshold: { value: 2, unit: 'R' },
     closePercentage: 25,
     partialId: '2R_25pct',
 });

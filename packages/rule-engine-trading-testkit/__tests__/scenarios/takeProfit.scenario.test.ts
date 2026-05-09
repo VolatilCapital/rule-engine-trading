@@ -7,7 +7,7 @@ describe('takeProfit', () => {
     const sc = scenario('Close position at +2R')
       .platform({ symbol: 'EURUSD', leverage: 100, balance: 10_000 })
       .openPosition({ side: 'BUY', volume: 0.1, entry: 1.0500, sl: 1.0480 })
-      .attachRule(createTakeProfitTemplate({ thresholdR: 2 }))
+      .attachRule(createTakeProfitTemplate({ threshold: { value: 2, unit: 'R' } }))
       .priceTo(1.0540)
       .expectActionExecuted(ActionType.PLACE_ORDER);
 
@@ -21,7 +21,7 @@ describe('takeProfit', () => {
     const sc = scenario('No trigger below 2R, then close at 2R')
       .platform({ symbol: 'EURUSD', leverage: 100, balance: 10_000 })
       .openPosition({ side: 'BUY', volume: 0.1, entry: 1.0500, sl: 1.0480 })
-      .attachRule(createTakeProfitTemplate({ thresholdR: 2 }))
+      .attachRule(createTakeProfitTemplate({ threshold: { value: 2, unit: 'R' } }))
       .priceTo(1.0530)
       .priceTo(1.0540)
       .expectActionExecuted(ActionType.PLACE_ORDER);

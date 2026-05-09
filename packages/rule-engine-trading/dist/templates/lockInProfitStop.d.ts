@@ -5,73 +5,83 @@
  *
  * Variant of breakeven, but guarantees actual profit instead of just entry price.
  *
- * Example: At +3R → move stop to guarantee +1R minimum
+ * Both `trigger` and `lockIn` are `Measurement` values that must share the same unit.
+ *
+ * The new stop price is pre-computed by the adapter (testkit harness or production
+ * context builder) and exposed under `lockInStopPrice_<value><unitSuffix>`:
+ *   - R       → suffix `R`     (e.g. `lockInStopPrice_1R`)
+ *   - percent → suffix `pct`   (e.g. `lockInStopPrice_1pct`)
+ *   - price   → suffix `price` (e.g. `lockInStopPrice_0_5price`)
+ *
+ * Numeric values use `_` instead of `.` to keep the key a valid identifier-like token.
+ *
+ * Example: At +3R → move stop to guarantee +1R minimum.
  */
 import { RuleTemplate } from 'rule-engine-monorepo/rule-engine';
+import { type Measurement } from '../domain/Measurement.js';
 /**
  * Parameters for lock-in profit stop template.
  */
 export interface LockInProfitStopTemplateParams {
     /**
-     * R threshold to trigger the stop move.
-     * Example: 3 means "when profit reaches 3R"
+     * Profit threshold (in any supported unit) that triggers the stop move.
+     * Example: `{ value: 3, unit: 'R' }` means "when profit reaches 3R".
      */
-    triggerR: number;
+    trigger: Measurement;
     /**
-     * R level to lock in (the new guaranteed minimum profit).
-     * Must be < triggerR.
-     * Example: 1 means "guarantee at least 1R profit"
+     * Profit level to lock in (the new guaranteed minimum profit).
+     * Must share the same unit as `trigger` and be strictly less than it.
+     * Example: `{ value: 1, unit: 'R' }` guarantees at least 1R profit.
      */
-    lockInR: number;
+    lockIn: Measurement;
     /** Unique identifier for multiple lock-in rules */
     ruleId?: string;
 }
 /**
+ * WeakMap that stores the LockInProfitStopTemplateParams for each created
+ * RuleTemplate. The testkit harness (or production context builder) walks
+ * this map to know which `lockInStopPrice_<value><unitSuffix>` keys to
+ * pre-fill in the execution context.
+ *
+ * @internal Internal convention between this factory and the adapter.
+ */
+export declare const lockInProfitStopParamsMap: WeakMap<RuleTemplate, LockInProfitStopTemplateParams>;
+/**
+ * Builds the canonical `lockInStopPrice_*` context key for a `lockIn`
+ * measurement. Replaces `.` with `_` so the key reads cleanly.
+ *
+ * Example: `{ value: 0.5, unit: 'R' }` → `lockInStopPrice_0_5R`.
+ *
+ * @internal Exported for adapter use only.
+ */
+export declare function lockInStopPriceKey(lockIn: Measurement): string;
+/**
  * Creates a rule template for lock-in profit stop.
  *
  * The rule:
- * - Triggers when currentR >= triggerR AND not already executed
- * - Moves stop loss to lock in the specified R profit
- * - Records a fact to prevent re-execution
+ * - Triggers when the profit-from-entry (in `trigger.unit`) ≥ `trigger.value`
+ *   AND the lock-in has not already been executed.
+ * - Moves stop loss to the pre-computed `lockInStopPrice_*` value.
+ * - Records a fact to prevent re-execution.
  *
- * Context requirements:
- * - `currentR`: number - current risk/reward ratio
- * - `entryPrice`: number - position entry price
- * - `riskPerUnit`: number - the R value per price unit (for calculating new stop)
+ * Throws synchronously when:
+ * - Either measurement is malformed.
+ * - `trigger.unit !== lockIn.unit`.
+ * - `lockIn.value >= trigger.value`.
  *
- * The new stop price is calculated as:
- *   For LONG: entryPrice + (lockInR * riskPerUnit)
- *   For SHORT: entryPrice - (lockInR * riskPerUnit)
- *
- * This is passed as a JSON Logic expression to be evaluated at execution time.
+ * Context requirements (populated by adapter):
+ * - One of `currentR | currentPctFromEntry | currentPriceMove` for the chosen unit.
+ * - `lockInStopPrice_<value><unitSuffix>` for the chosen `lockIn`.
  *
  * @example
  * ```typescript
- * // At +3R, lock in +1R profit
  * const template = createLockInProfitStopTemplate({
- *   triggerR: 3,
- *   lockInR: 1,
- * });
- *
- * // At +5R, lock in +2R profit
- * const template5R = createLockInProfitStopTemplate({
- *   triggerR: 5,
- *   lockInR: 2,
+ *   trigger: { value: 3, unit: 'R' },
+ *   lockIn: { value: 1, unit: 'R' },
  * });
  * ```
  */
 export declare function createLockInProfitStopTemplate(params: LockInProfitStopTemplateParams): RuleTemplate;
-/**
- * Alternative factory that uses explicit stop price calculation.
- * Requires context to provide the calculated stop price.
- *
- * The context should include a field like `lockInStopPrice` that is pre-calculated:
- * - For LONG: entryPrice + (lockInR * riskPerUnit)
- * - For SHORT: entryPrice - (lockInR * riskPerUnit)
- */
-export declare function createLockInProfitStopTemplateWithExplicitPrice(params: LockInProfitStopTemplateParams & {
-    stopPriceField: string;
-}): RuleTemplate;
 /**
  * Predefined: At +3R, lock in +1R profit.
  */

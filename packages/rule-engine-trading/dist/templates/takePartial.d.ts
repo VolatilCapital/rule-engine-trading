@@ -4,12 +4,13 @@
  * Creates rules that close a percentage of the position when profit threshold is reached.
  */
 import { RuleTemplate } from 'rule-engine-monorepo/rule-engine';
+import { type Measurement } from '../domain/Measurement.js';
 /**
  * Parameters for take partial template.
  */
 export interface TakePartialTemplateParams {
-    /** R threshold to trigger partial close (e.g., 1 = 1R profit) */
-    thresholdR: number;
+    /** Profit threshold (R, percent, or price) at which the partial close fires. */
+    threshold: Measurement;
     /** Percentage of position to close (0-100) */
     closePercentage: number;
     /** Unique identifier for this partial close (to prevent re-execution) */
@@ -19,7 +20,7 @@ export interface TakePartialTemplateParams {
  * Creates a rule template for taking a partial close at a profit threshold.
  *
  * The rule:
- * - Triggers when currentR >= thresholdR AND partial not already taken
+ * - Triggers when profit (in chosen unit) reaches `threshold` AND partial not already taken
  * - Closes the specified percentage of the position
  * - Records a fact to prevent re-execution
  *
@@ -27,21 +28,8 @@ export interface TakePartialTemplateParams {
  * ```typescript
  * // Close 50% of position at 2R profit
  * const template = createTakePartialTemplate({
- *   thresholdR: 2,
+ *   threshold: { value: 2, unit: 'R' },
  *   closePercentage: 50,
- * });
- *
- * // Create multiple partials with unique IDs
- * const partial1 = createTakePartialTemplate({
- *   thresholdR: 1,
- *   closePercentage: 33,
- *   partialId: 'first_partial',
- * });
- *
- * const partial2 = createTakePartialTemplate({
- *   thresholdR: 2,
- *   closePercentage: 50,
- *   partialId: 'second_partial',
  * });
  * ```
  */

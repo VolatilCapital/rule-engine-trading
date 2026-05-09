@@ -1,5 +1,13 @@
 // Domain
 export { ActionType, ConditionReference, TriggerType } from './domain/TradingEnums.js';
+export {
+  PROFIT_FIELD,
+  PEAK_FIELD,
+  DRAWDOWN_FROM_PEAK_FIELD,
+  assertMeasurement,
+  type Unit,
+  type Measurement,
+} from './domain/Measurement.js';
 
 // Templates
 export { createMoveSLToBreakevenTemplate, type MoveSLToBreakevenTemplateParams } from './templates/moveSLToBreakeven.js';
@@ -56,7 +64,8 @@ export {
 } from './templates/freeTrade.js';
 export {
   createLockInProfitStopTemplate,
-  createLockInProfitStopTemplateWithExplicitPrice,
+  /** @internal Used by testkit harness to retrieve LockInProfitStopTemplateParams from a RuleTemplate. */
+  lockInProfitStopParamsMap,
   LOCK_IN_3R_TO_1R,
   LOCK_IN_2R_TO_05R,
   LOCK_IN_4R_TO_2R,

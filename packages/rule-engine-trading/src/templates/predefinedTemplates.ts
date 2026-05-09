@@ -1,4 +1,5 @@
 import { RuleTemplate } from 'rule-engine-monorepo/rule-engine';
+import type { Unit, Measurement } from '../domain/Measurement.js';
 import { createMoveSLToBreakevenTemplate, MoveSLToBreakevenTemplateParams } from './moveSLToBreakeven.js';
 import { createTakeProfitTemplate, TakeProfitTemplateParams } from './takeProfit.js';
 import { createTimeBasedStopTemplate, TimeBasedStopTemplateParams } from './timeBasedStop.js';
@@ -44,9 +45,15 @@ export interface TemplateDefinition<T = any> {
    * aux valeurs acceptées par le moteur de règles.
    *
    * Exemple : options: ['below', 'above'] pour un paramètre de direction de prix.
+   *
+   * Multi-unit measurement parameters (`Measurement` in the factory params) are
+   * exposed flat as a `<name>Value: number` + `<name>Unit: 'R'|'percent'|'price'`
+   * pair so the form pipeline stays simple. The `create` wrapper reassembles them
+   * into a `Measurement` object before delegating to the factory.
    */
   parameters: Array<{
-    name: keyof T;
+    /** Field name on the *flat UI params*, not necessarily on the factory params. */
+    name: string;
     type: 'number' | 'string' | 'boolean';
     default: number | string | boolean;
     min?: number;
@@ -56,6 +63,64 @@ export interface TemplateDefinition<T = any> {
     options?: string[];
   }>;
   create: (params: T) => RuleTemplate;
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// Helpers for measurement-typed parameters
+// ──────────────────────────────────────────────────────────────────────────
+
+const UNIT_OPTIONS: readonly Unit[] = ['R', 'percent', 'price'];
+
+/** Reads `<name>Value` + `<name>Unit` from a flat UI params bag. */
+function readMeasurement(
+  source: Record<string, unknown>,
+  name: string,
+): Measurement {
+  const value = source[`${name}Value`];
+  const unit = source[`${name}Unit`];
+  return {
+    value: typeof value === 'number' ? value : Number(value),
+    unit: unit as Unit,
+  };
+}
+
+// Flat UI param bags for templates whose factory params contain `Measurement`s.
+// The `create` wrappers reassemble these into the proper factory shape.
+
+interface SLBreakevenFlatParams {
+  thresholdValue: number;
+  thresholdUnit: Unit;
+}
+
+interface LockInFlatParams {
+  triggerValue: number;
+  triggerUnit: Unit;
+  lockInValue: number;
+  lockInUnit: Unit;
+  ruleId?: string;
+}
+
+interface TPFlatParams {
+  thresholdValue: number;
+  thresholdUnit: Unit;
+}
+
+interface FreeTradeFlatParams {
+  triggerValue: number;
+  triggerUnit: Unit;
+  recoverValue: number;
+  recoverUnit: Unit;
+  ruleId?: string;
+}
+
+interface PatternExitFlatParams {
+  positionDirection: 'long' | 'short';
+  minProfitValue: number;
+  minProfitUnit: Unit;
+  closePercentage: number;
+  patternNames?: string[];
+  timeframe?: string;
+  ruleId?: string;
 }
 
 // ============================================================================
@@ -89,26 +154,37 @@ export const TRAILING_STOP_TEMPLATE: TemplateDefinition<TrailingStopParams> = {
   create: createTrailingStopTemplate
 };
 
-export const SL_BREAKEVEN_TEMPLATE: TemplateDefinition<MoveSLToBreakevenTemplateParams> = {
+export const SL_BREAKEVEN_TEMPLATE: TemplateDefinition<SLBreakevenFlatParams> = {
   id: 'sl-breakeven',
   name: 'Stop-Loss to Breakeven',
-  description: 'Move stop-loss to entry price when profit reaches a threshold (R multiple)',
+  description: 'Move stop-loss to entry price when profit reaches a threshold (R, percent, or absolute price)',
   category: 'stop-loss',
   maturity: 'stable',
   parameters: [
     {
-      name: 'thresholdR',
+      name: 'thresholdValue',
       type: 'number',
       default: 2,
-      min: 0.5,
-      max: 10,
-      description: 'R threshold to trigger breakeven move'
+      min: 0,
+      description: 'Profit threshold value to trigger breakeven move'
+    },
+    {
+      name: 'thresholdUnit',
+      type: 'string',
+      default: 'R',
+      description: 'Unit of the threshold',
+      options: [...UNIT_OPTIONS],
     }
   ],
-  create: createMoveSLToBreakevenTemplate
+  create: (flat: SLBreakevenFlatParams): RuleTemplate => {
+    const params: MoveSLToBreakevenTemplateParams = {
+      threshold: readMeasurement(flat as unknown as Record<string, unknown>, 'threshold'),
+    };
+    return createMoveSLToBreakevenTemplate(params);
+  },
 };
 
-export const LOCK_IN_PROFIT_STOP_TEMPLATE: TemplateDefinition<LockInProfitStopTemplateParams> = {
+export const LOCK_IN_PROFIT_STOP_TEMPLATE: TemplateDefinition<LockInFlatParams> = {
   id: 'lock-in-profit-stop',
   name: 'Lock-in Profit Stop',
   description: 'Move stop to guarantee minimum profit when higher profit reached',
@@ -116,49 +192,80 @@ export const LOCK_IN_PROFIT_STOP_TEMPLATE: TemplateDefinition<LockInProfitStopTe
   maturity: 'stable',
   parameters: [
     {
-      name: 'triggerR',
+      name: 'triggerValue',
       type: 'number',
       default: 3,
-      min: 1,
-      max: 20,
-      description: 'R threshold to trigger the lock-in'
+      min: 0,
+      description: 'Profit value that triggers the lock-in'
     },
     {
-      name: 'lockInR',
+      name: 'triggerUnit',
+      type: 'string',
+      default: 'R',
+      description: 'Unit of the trigger',
+      options: [...UNIT_OPTIONS],
+    },
+    {
+      name: 'lockInValue',
       type: 'number',
       default: 1,
       min: 0,
-      max: 10,
-      description: 'R level to lock in as guaranteed profit'
+      description: 'Profit value to lock in (must share unit with trigger)'
+    },
+    {
+      name: 'lockInUnit',
+      type: 'string',
+      default: 'R',
+      description: 'Unit of the lock-in value',
+      options: [...UNIT_OPTIONS],
     }
   ],
-  create: createLockInProfitStopTemplate
+  create: (flat: LockInFlatParams): RuleTemplate => {
+    const source = flat as unknown as Record<string, unknown>;
+    const params: LockInProfitStopTemplateParams = {
+      trigger: readMeasurement(source, 'trigger'),
+      lockIn: readMeasurement(source, 'lockIn'),
+    };
+    if (flat.ruleId !== undefined) params.ruleId = flat.ruleId;
+    return createLockInProfitStopTemplate(params);
+  },
 };
 
 // ============================================================================
 // Take Profit Templates
 // ============================================================================
 
-export const TP_TEMPLATE: TemplateDefinition<TakeProfitTemplateParams> = {
+export const TP_TEMPLATE: TemplateDefinition<TPFlatParams> = {
   id: 'take-profit',
   name: 'Take Profit',
-  description: 'Close position when profit reaches a target (R multiple)',
+  description: 'Close position when profit reaches a target (R, percent, or absolute price)',
   category: 'take-profit',
   maturity: 'stable',
   parameters: [
     {
-      name: 'thresholdR',
+      name: 'thresholdValue',
       type: 'number',
       default: 3,
-      min: 1,
-      max: 20,
-      description: 'R target for taking profit'
+      min: 0,
+      description: 'Profit target value'
+    },
+    {
+      name: 'thresholdUnit',
+      type: 'string',
+      default: 'R',
+      description: 'Unit of the threshold',
+      options: [...UNIT_OPTIONS],
     }
   ],
-  create: createTakeProfitTemplate
+  create: (flat: TPFlatParams): RuleTemplate => {
+    const params: TakeProfitTemplateParams = {
+      threshold: readMeasurement(flat as unknown as Record<string, unknown>, 'threshold'),
+    };
+    return createTakeProfitTemplate(params);
+  },
 };
 
-export const FREE_TRADE_TEMPLATE: TemplateDefinition<FreeTradeTemplateParams> = {
+export const FREE_TRADE_TEMPLATE: TemplateDefinition<FreeTradeFlatParams> = {
   id: 'free-trade',
   name: 'Free Trade',
   description: 'Recover initial risk by partial close at profit threshold',
@@ -166,23 +273,43 @@ export const FREE_TRADE_TEMPLATE: TemplateDefinition<FreeTradeTemplateParams> = 
   maturity: 'lab',
   parameters: [
     {
-      name: 'triggerR',
+      name: 'triggerValue',
       type: 'number',
       default: 2,
-      min: 1,
-      max: 10,
-      description: 'R threshold to trigger risk recovery'
+      min: 0,
+      description: 'Profit value that triggers the risk recovery'
     },
     {
-      name: 'rToRecover',
+      name: 'triggerUnit',
+      type: 'string',
+      default: 'R',
+      description: 'Unit of the trigger',
+      options: [...UNIT_OPTIONS],
+    },
+    {
+      name: 'recoverValue',
       type: 'number',
       default: 1,
-      min: 0.5,
-      max: 5,
-      description: 'R amount to recover (typically 1 = initial risk)'
+      min: 0,
+      description: 'Amount to recover (must share unit with trigger)'
+    },
+    {
+      name: 'recoverUnit',
+      type: 'string',
+      default: 'R',
+      description: 'Unit of the recover value',
+      options: [...UNIT_OPTIONS],
     }
   ],
-  create: createFreeTradeTemplate
+  create: (flat: FreeTradeFlatParams): RuleTemplate => {
+    const source = flat as unknown as Record<string, unknown>;
+    const params: FreeTradeTemplateParams = {
+      trigger: readMeasurement(source, 'trigger'),
+      recover: readMeasurement(source, 'recover'),
+    };
+    if (flat.ruleId !== undefined) params.ruleId = flat.ruleId;
+    return createFreeTradeTemplate(params);
+  },
 };
 
 // ============================================================================
@@ -267,7 +394,7 @@ export const MAX_DRAWDOWN_FROM_PEAK_TEMPLATE: TemplateDefinition<MaxDrawdownFrom
 // Pattern-based Templates
 // ============================================================================
 
-export const PATTERN_BASED_EXIT_TEMPLATE: TemplateDefinition<PatternBasedExitTemplateParams> = {
+export const PATTERN_BASED_EXIT_TEMPLATE: TemplateDefinition<PatternExitFlatParams> = {
   id: 'pattern-based-exit',
   name: 'Pattern-based Exit',
   description: 'Exit on candlestick patterns (bearish for long, bullish for short)',
@@ -282,12 +409,18 @@ export const PATTERN_BASED_EXIT_TEMPLATE: TemplateDefinition<PatternBasedExitTem
       options: ['long', 'short'],
     },
     {
-      name: 'minProfitR',
+      name: 'minProfitValue',
       type: 'number',
       default: 0,
       min: 0,
-      max: 10,
-      description: 'Minimum profit R before pattern exit is allowed'
+      description: 'Minimum profit value before pattern exit is allowed (0 = no minimum)'
+    },
+    {
+      name: 'minProfitUnit',
+      type: 'string',
+      default: 'R',
+      description: 'Unit of the minimum-profit threshold',
+      options: [...UNIT_OPTIONS],
     },
     {
       name: 'closePercentage',
@@ -298,8 +431,19 @@ export const PATTERN_BASED_EXIT_TEMPLATE: TemplateDefinition<PatternBasedExitTem
       description: 'Percentage of position to close'
     }
   ],
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  create: createPatternBasedExitTemplate as (params: any) => RuleTemplate
+  create: (flat: PatternExitFlatParams): RuleTemplate => {
+    const params: PatternBasedExitTemplateParams = {
+      positionDirection: flat.positionDirection,
+      closePercentage: flat.closePercentage,
+    };
+    if (flat.minProfitValue > 0) {
+      params.minProfit = readMeasurement(flat as unknown as Record<string, unknown>, 'minProfit');
+    }
+    if (flat.patternNames !== undefined) params.patternNames = flat.patternNames;
+    if (flat.timeframe !== undefined) params.timeframe = flat.timeframe;
+    if (flat.ruleId !== undefined) params.ruleId = flat.ruleId;
+    return createPatternBasedExitTemplate(params);
+  },
 };
 
 // ============================================================================

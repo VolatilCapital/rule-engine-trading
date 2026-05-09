@@ -8,6 +8,19 @@ import { createPatternBasedExitTemplate } from './patternBasedExit.js';
 import { createCancelPendingOnPriceLevelTemplate } from './cancelPendingOnPriceLevel.js';
 import { createPartialCloseAtPriceTemplate } from './partialCloseAtPrice.js';
 import { createTrailingStopTemplate } from './trailingStop.js';
+// ──────────────────────────────────────────────────────────────────────────
+// Helpers for measurement-typed parameters
+// ──────────────────────────────────────────────────────────────────────────
+const UNIT_OPTIONS = ['R', 'percent', 'price'];
+/** Reads `<name>Value` + `<name>Unit` from a flat UI params bag. */
+function readMeasurement(source, name) {
+    const value = source[`${name}Value`];
+    const unit = source[`${name}Unit`];
+    return {
+        value: typeof value === 'number' ? value : Number(value),
+        unit: unit,
+    };
+}
 // ============================================================================
 // Stop Loss Templates
 // ============================================================================
@@ -40,20 +53,31 @@ export const TRAILING_STOP_TEMPLATE = {
 export const SL_BREAKEVEN_TEMPLATE = {
     id: 'sl-breakeven',
     name: 'Stop-Loss to Breakeven',
-    description: 'Move stop-loss to entry price when profit reaches a threshold (R multiple)',
+    description: 'Move stop-loss to entry price when profit reaches a threshold (R, percent, or absolute price)',
     category: 'stop-loss',
     maturity: 'stable',
     parameters: [
         {
-            name: 'thresholdR',
+            name: 'thresholdValue',
             type: 'number',
             default: 2,
-            min: 0.5,
-            max: 10,
-            description: 'R threshold to trigger breakeven move'
+            min: 0,
+            description: 'Profit threshold value to trigger breakeven move'
+        },
+        {
+            name: 'thresholdUnit',
+            type: 'string',
+            default: 'R',
+            description: 'Unit of the threshold',
+            options: [...UNIT_OPTIONS],
         }
     ],
-    create: createMoveSLToBreakevenTemplate
+    create: (flat) => {
+        const params = {
+            threshold: readMeasurement(flat, 'threshold'),
+        };
+        return createMoveSLToBreakevenTemplate(params);
+    },
 };
 export const LOCK_IN_PROFIT_STOP_TEMPLATE = {
     id: 'lock-in-profit-stop',
@@ -63,23 +87,44 @@ export const LOCK_IN_PROFIT_STOP_TEMPLATE = {
     maturity: 'stable',
     parameters: [
         {
-            name: 'triggerR',
+            name: 'triggerValue',
             type: 'number',
             default: 3,
-            min: 1,
-            max: 20,
-            description: 'R threshold to trigger the lock-in'
+            min: 0,
+            description: 'Profit value that triggers the lock-in'
         },
         {
-            name: 'lockInR',
+            name: 'triggerUnit',
+            type: 'string',
+            default: 'R',
+            description: 'Unit of the trigger',
+            options: [...UNIT_OPTIONS],
+        },
+        {
+            name: 'lockInValue',
             type: 'number',
             default: 1,
             min: 0,
-            max: 10,
-            description: 'R level to lock in as guaranteed profit'
+            description: 'Profit value to lock in (must share unit with trigger)'
+        },
+        {
+            name: 'lockInUnit',
+            type: 'string',
+            default: 'R',
+            description: 'Unit of the lock-in value',
+            options: [...UNIT_OPTIONS],
         }
     ],
-    create: createLockInProfitStopTemplate
+    create: (flat) => {
+        const source = flat;
+        const params = {
+            trigger: readMeasurement(source, 'trigger'),
+            lockIn: readMeasurement(source, 'lockIn'),
+        };
+        if (flat.ruleId !== undefined)
+            params.ruleId = flat.ruleId;
+        return createLockInProfitStopTemplate(params);
+    },
 };
 // ============================================================================
 // Take Profit Templates
@@ -87,20 +132,31 @@ export const LOCK_IN_PROFIT_STOP_TEMPLATE = {
 export const TP_TEMPLATE = {
     id: 'take-profit',
     name: 'Take Profit',
-    description: 'Close position when profit reaches a target (R multiple)',
+    description: 'Close position when profit reaches a target (R, percent, or absolute price)',
     category: 'take-profit',
     maturity: 'stable',
     parameters: [
         {
-            name: 'thresholdR',
+            name: 'thresholdValue',
             type: 'number',
             default: 3,
-            min: 1,
-            max: 20,
-            description: 'R target for taking profit'
+            min: 0,
+            description: 'Profit target value'
+        },
+        {
+            name: 'thresholdUnit',
+            type: 'string',
+            default: 'R',
+            description: 'Unit of the threshold',
+            options: [...UNIT_OPTIONS],
         }
     ],
-    create: createTakeProfitTemplate
+    create: (flat) => {
+        const params = {
+            threshold: readMeasurement(flat, 'threshold'),
+        };
+        return createTakeProfitTemplate(params);
+    },
 };
 export const FREE_TRADE_TEMPLATE = {
     id: 'free-trade',
@@ -110,23 +166,44 @@ export const FREE_TRADE_TEMPLATE = {
     maturity: 'lab',
     parameters: [
         {
-            name: 'triggerR',
+            name: 'triggerValue',
             type: 'number',
             default: 2,
-            min: 1,
-            max: 10,
-            description: 'R threshold to trigger risk recovery'
+            min: 0,
+            description: 'Profit value that triggers the risk recovery'
         },
         {
-            name: 'rToRecover',
+            name: 'triggerUnit',
+            type: 'string',
+            default: 'R',
+            description: 'Unit of the trigger',
+            options: [...UNIT_OPTIONS],
+        },
+        {
+            name: 'recoverValue',
             type: 'number',
             default: 1,
-            min: 0.5,
-            max: 5,
-            description: 'R amount to recover (typically 1 = initial risk)'
+            min: 0,
+            description: 'Amount to recover (must share unit with trigger)'
+        },
+        {
+            name: 'recoverUnit',
+            type: 'string',
+            default: 'R',
+            description: 'Unit of the recover value',
+            options: [...UNIT_OPTIONS],
         }
     ],
-    create: createFreeTradeTemplate
+    create: (flat) => {
+        const source = flat;
+        const params = {
+            trigger: readMeasurement(source, 'trigger'),
+            recover: readMeasurement(source, 'recover'),
+        };
+        if (flat.ruleId !== undefined)
+            params.ruleId = flat.ruleId;
+        return createFreeTradeTemplate(params);
+    },
 };
 // ============================================================================
 // Time-based Templates
@@ -220,12 +297,18 @@ export const PATTERN_BASED_EXIT_TEMPLATE = {
             options: ['long', 'short'],
         },
         {
-            name: 'minProfitR',
+            name: 'minProfitValue',
             type: 'number',
             default: 0,
             min: 0,
-            max: 10,
-            description: 'Minimum profit R before pattern exit is allowed'
+            description: 'Minimum profit value before pattern exit is allowed (0 = no minimum)'
+        },
+        {
+            name: 'minProfitUnit',
+            type: 'string',
+            default: 'R',
+            description: 'Unit of the minimum-profit threshold',
+            options: [...UNIT_OPTIONS],
         },
         {
             name: 'closePercentage',
@@ -236,8 +319,22 @@ export const PATTERN_BASED_EXIT_TEMPLATE = {
             description: 'Percentage of position to close'
         }
     ],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    create: createPatternBasedExitTemplate
+    create: (flat) => {
+        const params = {
+            positionDirection: flat.positionDirection,
+            closePercentage: flat.closePercentage,
+        };
+        if (flat.minProfitValue > 0) {
+            params.minProfit = readMeasurement(flat, 'minProfit');
+        }
+        if (flat.patternNames !== undefined)
+            params.patternNames = flat.patternNames;
+        if (flat.timeframe !== undefined)
+            params.timeframe = flat.timeframe;
+        if (flat.ruleId !== undefined)
+            params.ruleId = flat.ruleId;
+        return createPatternBasedExitTemplate(params);
+    },
 };
 // ============================================================================
 // Order Management Templates

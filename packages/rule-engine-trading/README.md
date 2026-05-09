@@ -2,6 +2,33 @@
 
 Trading rule definitions — templates, actions, conditions, registry, and schemas for the rule-engine.
 
+## Measurement
+
+Several templates take their thresholds as a `Measurement` so the same rule
+can be expressed in R-multiples, percent of price, or absolute price move:
+
+```ts
+export type Unit = 'R' | 'percent' | 'price';
+export interface Measurement { readonly value: number; readonly unit: Unit; }
+```
+
+| Unit | Compares against context field | Example |
+|---|---|---|
+| `R` | `currentR` | `{ value: 2, unit: 'R' }` |
+| `percent` | `currentPctFromEntry` | `{ value: 1.5, unit: 'percent' }` |
+| `price` | `currentPriceMove` | `{ value: 0.5, unit: 'price' }` |
+
+The mapping is fixed by `PROFIT_FIELD` in `domain/Measurement.ts`. The
+`currentPctFromEntry` and `currentPriceMove` fields are populated **side-awarely
+and profit-positive** by the adapter (testkit harness or production context
+builder), so a rule does not need to know whether the trade is LONG or SHORT.
+
+Coupled measurements (`trigger`/`lockIn`, `trigger`/`recover`) must share the
+same unit; the factory throws synchronously otherwise.
+
+The bundled validator `assertMeasurement(name, m, opts?)` enforces the shape
+and a positive value (`opts.allowZero` lifts the floor to `>= 0`).
+
 ## Templates
 
 ### Trailing Stop
@@ -37,6 +64,23 @@ const trailingAct = createTrailingStopTemplate({ distance: 0.5, activationR: 1 }
 |---|---|---|
 | `trailingNewSL` | `number` | Candidate new SL price |
 | `trailingShouldExecute` | `0 \| 1` | 1 when activation is met AND candidate SL is favorable |
+
+### Multi-unit templates (Phase A)
+
+The following six templates accept `Measurement` parameters:
+
+| Template | Parameters |
+|---|---|
+| `take-profit` | `threshold: Measurement` |
+| `take-partial` | `threshold: Measurement`, `closePercentage: number`, `partialId?: string` |
+| `move-sl-to-breakeven` | `threshold: Measurement` |
+| `lock-in-profit-stop` | `trigger: Measurement`, `lockIn: Measurement` (same unit; `lockIn.value < trigger.value`), `ruleId?: string` |
+| `free-trade` | `trigger: Measurement`, `recover: Measurement` (same unit; `trigger.value >= recover.value`), `ruleId?: string` |
+| `pattern-based-exit` | `positionDirection`, `minProfit?: Measurement`, `closePercentage?`, `patternNames?`, `timeframe?`, `ruleId?` |
+
+Predefined named instances (`TAKE_PARTIAL_*`, `LOCK_IN_*`, `FREE_TRADE_*`,
+`PATTERN_EXIT_*`) keep their identifiers; their literals were rewritten as
+`{ value: X, unit: 'R' }`.
 
 ### All templates
 

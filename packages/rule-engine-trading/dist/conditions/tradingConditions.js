@@ -1,12 +1,32 @@
 import { AtomicCondition, Operator, LogicalCondition, LogicalOperator, MemorizableCondition } from 'rule-engine-monorepo/rule-engine';
+import { assertMeasurement, PROFIT_FIELD } from '../domain/Measurement.js';
 // ============================================================================
 // Basic Conditions
 // ============================================================================
-export function createProfitThresholdCondition(thresholdR) {
-    return AtomicCondition.create('currentR', Operator.GREATER_EQUAL, thresholdR, 'currentR_check');
+/**
+ * Creates a "profit-from-entry >= threshold" atomic condition.
+ *
+ * The context field is selected from `PROFIT_FIELD[threshold.unit]`:
+ * - `R`     → `currentR`
+ * - `percent` → `currentPctFromEntry`
+ * - `price` → `currentPriceMove`
+ *
+ * The adapter (harness or production context builder) is responsible for
+ * populating the chosen field side-awarely (positive when winning).
+ */
+export function createProfitThresholdCondition(threshold) {
+    assertMeasurement('threshold', threshold);
+    const field = PROFIT_FIELD[threshold.unit];
+    return AtomicCondition.create(field, Operator.GREATER_EQUAL, threshold.value, `${field}_check`);
 }
-export function createProfitBelowCondition(thresholdR) {
-    return AtomicCondition.create('currentR', Operator.LESS_THAN, thresholdR, 'currentR_below_check');
+/**
+ * Creates a "profit-from-entry < threshold" atomic condition.
+ * Same field selection rules as `createProfitThresholdCondition`.
+ */
+export function createProfitBelowCondition(threshold) {
+    assertMeasurement('threshold', threshold);
+    const field = PROFIT_FIELD[threshold.unit];
+    return AtomicCondition.create(field, Operator.LESS_THAN, threshold.value, `${field}_below_check`);
 }
 export function createNotExecutedCondition(factKey) {
     // NOT_EQUAL true permet à undefined !== true de retourner true

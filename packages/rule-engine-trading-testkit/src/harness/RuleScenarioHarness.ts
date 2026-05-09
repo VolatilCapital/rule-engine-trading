@@ -69,6 +69,20 @@ export interface TradingContextFacts {
   peakR: number;
   /** Drawdown from peak R (peakR - currentR, floored at 0) */
   drawdownFromPeakR: number;
+  /**
+   * Peak percent-from-entry reached during the trade lifetime.
+   * Side-aware, profit-positive. Always ≥ 0 by construction.
+   */
+  peakPctFromEntry: number;
+  /**
+   * Peak absolute price move from entry reached during the trade lifetime.
+   * Side-aware, profit-positive. Always ≥ 0 by construction.
+   */
+  peakPriceMove: number;
+  /** Drawdown from the percent peak (`max(0, peakPctFromEntry − currentPctFromEntry)`). */
+  drawdownFromPeakPct: number;
+  /** Drawdown from the price peak (`max(0, peakPriceMove − currentPriceMove)`). */
+  drawdownFromPeakPrice: number;
   /** Arbitrary per-rule facts (e.g. slMoved, partialSlDone) */
   facts: Record<string, boolean>;
   /** Pattern detection flags (populated externally if needed) */
@@ -142,6 +156,14 @@ export class RuleScenarioHarness {
   /** Trade side. `+1` for BUY (long), `-1` for SELL (short). */
   #sideSign: 1 | -1 = 1;
   #peakR = 0;
+  /**
+   * Most-favorable price seen during the current trade lifetime.
+   * - LONG (sign=+1): the highest price seen so far.
+   * - SHORT (sign=-1): the lowest price seen so far.
+   * Initialised to `entryPrice` on `openPosition()` and reset on each new
+   * position. `null` while no position is open.
+   */
+  #peakPrice: number | null = null;
   #lastBid = 0;
   #lastAsk = 0;
   #patterns: Record<string, boolean> = {};
@@ -233,6 +255,9 @@ export class RuleScenarioHarness {
     this.#openedAt = this.#clock.now();
     this.#sideSign = opts.side === 'BUY' ? 1 : -1;
     this.#peakR = 0;
+    // Reset peak-price tracking on every new position. Subsequent ticks update
+    // it side-awarely in #buildContext.
+    this.#peakPrice = opts.entry;
 
     if (opts.sl !== undefined) {
       const slResult = this.#broker.updatePositionStopLoss(result.positionId, opts.sl);
@@ -394,6 +419,21 @@ export class RuleScenarioHarness {
       this.#peakR = currentR;
     }
 
+    // Side-aware peak-price tracking: update to the most favorable price seen.
+    // Lazy init guards against ticks emitted before openPosition() (defensive).
+    if (this.#peakPrice === null) this.#peakPrice = entryPrice;
+    if (sign === 1
+      ? currentPrice > this.#peakPrice
+      : currentPrice < this.#peakPrice) {
+      this.#peakPrice = currentPrice;
+    }
+    // Profit-positive peak quantities by construction of #peakPrice + sign.
+    const peakPriceMove = sign * (this.#peakPrice - entryPrice);
+    const peakPctFromEntry =
+      entryPrice !== 0 ? (peakPriceMove / entryPrice) * 100 : 0;
+    const drawdownFromPeakPct = Math.max(0, peakPctFromEntry - currentPctFromEntry);
+    const drawdownFromPeakPrice = Math.max(0, peakPriceMove - currentPriceMove);
+
     const elapsedMs = this.#openedAt !== null ? this.#clock.now() - this.#openedAt : 0;
     const elapsedMinutes = elapsedMs / 60_000;
 
@@ -515,6 +555,10 @@ export class RuleScenarioHarness {
       elapsedMinutes,
       peakR: this.#peakR,
       drawdownFromPeakR: Math.max(0, this.#peakR - currentR),
+      peakPctFromEntry,
+      peakPriceMove,
+      drawdownFromPeakPct,
+      drawdownFromPeakPrice,
       entryPrice,
       facts: {},
       patterns: { ...this.#patterns },

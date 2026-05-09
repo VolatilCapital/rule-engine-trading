@@ -112,11 +112,15 @@ function createPriceAboveCondition(price) {
 function createTimeElapsedCondition(minutes) {
   return AtomicCondition.create("elapsedMinutes", Operator.GREATER_EQUAL, minutes, "time_elapsed_check");
 }
-function createPeakRReachedCondition(thresholdR) {
-  return AtomicCondition.create("peakR", Operator.GREATER_EQUAL, thresholdR, "peakR_reached_check");
+function createPeakReachedCondition(threshold) {
+  assertMeasurement("threshold", threshold);
+  const field = PEAK_FIELD[threshold.unit];
+  return AtomicCondition.create(field, Operator.GREATER_EQUAL, threshold.value, `${field}_reached_check`);
 }
-function createDrawdownFromPeakCondition(drawdownR) {
-  return AtomicCondition.create("drawdownFromPeakR", Operator.GREATER_EQUAL, drawdownR, "drawdown_from_peak_check");
+function createDrawdownFromPeakCondition(threshold) {
+  assertMeasurement("threshold", threshold);
+  const field = DRAWDOWN_FROM_PEAK_FIELD[threshold.unit];
+  return AtomicCondition.create(field, Operator.GREATER_EQUAL, threshold.value, `${field}_check`);
 }
 function createPatternDetectedCondition(patternName) {
   return AtomicCondition.create(`patterns.${patternName}`, Operator.EQUAL, true, `pattern_${patternName}_check`);
@@ -393,23 +397,37 @@ var LOCK_IN_5R_TO_3R = createLockInProfitStopTemplate({
 // dist/templates/maxDrawdownFromPeak.js
 import { RuleTemplate as RuleTemplate7, AtomicCondition as AtomicCondition3, Operator as Operator3 } from "rule-engine-monorepo/rule-engine";
 var MAX_DRAWDOWN_FACT_PREFIX = "max_drawdown_from_peak_executed";
+var UNIT_SUFFIX2 = {
+  R: "R",
+  percent: "pct",
+  price: "price"
+};
 function createMaxDrawdownFromPeakTemplate(params) {
-  const { minPeakR, maxDrawdownR, minCurrentR, closePercentage = 100, ruleId } = params;
-  if (minPeakR <= 0) {
-    throw new Error("minPeakR must be greater than 0");
+  const { minPeak, maxDrawdown, minCurrent, closePercentage = 100, ruleId } = params;
+  assertMeasurement("minPeak", minPeak);
+  assertMeasurement("maxDrawdown", maxDrawdown);
+  if (minCurrent !== void 0) {
+    assertMeasurement("minCurrent", minCurrent, { allowZero: true });
   }
-  if (maxDrawdownR <= 0) {
-    throw new Error("maxDrawdownR must be greater than 0");
+  const units = [minPeak.unit, maxDrawdown.unit];
+  if (minCurrent !== void 0)
+    units.push(minCurrent.unit);
+  const allSame = units.every((u) => u === units[0]);
+  if (!allSame) {
+    throw new Error("minPeak, maxDrawdown, and minCurrent must share the same unit");
   }
   if (closePercentage <= 0 || closePercentage > 100) {
     throw new Error("closePercentage must be between 0 and 100");
   }
-  const factKey = ruleId ? `${MAX_DRAWDOWN_FACT_PREFIX}_${ruleId}` : `${MAX_DRAWDOWN_FACT_PREFIX}_peak${minPeakR}R_dd${maxDrawdownR}R`;
+  const unit = minPeak.unit;
+  const suffix = UNIT_SUFFIX2[unit];
+  const factKey = ruleId ? `${MAX_DRAWDOWN_FACT_PREFIX}_${ruleId}` : `${MAX_DRAWDOWN_FACT_PREFIX}_peak${minPeak.value}${suffix}_dd${maxDrawdown.value}${suffix}`;
   const conditions = [];
-  conditions.push(AtomicCondition3.create("peakR", Operator3.GREATER_EQUAL, minPeakR, "peak_r_check"));
-  conditions.push(AtomicCondition3.create("drawdownFromPeakR", Operator3.GREATER_EQUAL, maxDrawdownR, "drawdown_from_peak_check"));
-  if (minCurrentR !== void 0) {
-    conditions.push(AtomicCondition3.create("currentR", Operator3.GREATER_EQUAL, minCurrentR, "min_current_r_check"));
+  conditions.push(createPeakReachedCondition(minPeak));
+  conditions.push(createDrawdownFromPeakCondition(maxDrawdown));
+  if (minCurrent !== void 0) {
+    const field = PROFIT_FIELD[minCurrent.unit];
+    conditions.push(AtomicCondition3.create(field, Operator3.GREATER_EQUAL, minCurrent.value, `${field}_min_current_check`));
   }
   const mainCondition = createAndCondition([...conditions, createNotExecutedCondition(factKey)], "max_drawdown_from_peak_condition");
   const action = closePercentage === 100 ? createClosePositionAction() : createPartialCloseByPercentage({ percentage: closePercentage });
@@ -417,24 +435,24 @@ function createMaxDrawdownFromPeakTemplate(params) {
   return RuleTemplate7.create(mainCondition, [action], [historicalCondition]);
 }
 var MAX_DD_4R_PEAK_25R_DD = createMaxDrawdownFromPeakTemplate({
-  minPeakR: 4,
-  maxDrawdownR: 2.5,
+  minPeak: { value: 4, unit: "R" },
+  maxDrawdown: { value: 2.5, unit: "R" },
   ruleId: "4R_peak_25R_dd"
 });
 var MAX_DD_3R_PEAK_15R_DD = createMaxDrawdownFromPeakTemplate({
-  minPeakR: 3,
-  maxDrawdownR: 1.5,
+  minPeak: { value: 3, unit: "R" },
+  maxDrawdown: { value: 1.5, unit: "R" },
   ruleId: "3R_peak_15R_dd"
 });
 var MAX_DD_2R_PEAK_1R_DD = createMaxDrawdownFromPeakTemplate({
-  minPeakR: 2,
-  maxDrawdownR: 1,
+  minPeak: { value: 2, unit: "R" },
+  maxDrawdown: { value: 1, unit: "R" },
   ruleId: "2R_peak_1R_dd"
 });
 var MAX_DD_5R_PEAK_2R_DD_MIN_1R = createMaxDrawdownFromPeakTemplate({
-  minPeakR: 5,
-  maxDrawdownR: 2,
-  minCurrentR: 1,
+  minPeak: { value: 5, unit: "R" },
+  maxDrawdown: { value: 2, unit: "R" },
+  minCurrent: { value: 1, unit: "R" },
   ruleId: "5R_peak_2R_dd_min1R"
 });
 
@@ -825,25 +843,54 @@ var TIME_BASED_STOP_TEMPLATE = {
 var MAX_DRAWDOWN_FROM_PEAK_TEMPLATE = {
   id: "max-drawdown-from-peak",
   name: "Max Drawdown from Peak",
-  description: "Close position if profit drops too much from peak R",
+  description: "Close position if profit drops too much from the peak reached during the trade. minPeak / maxDrawdown / minCurrent must share the same unit (R, percent, or price). Set minCurrentValue \u2264 0 to omit the optional current-profit gate.",
   category: "risk-management",
   maturity: "lab",
   parameters: [
     {
-      name: "minPeakR",
+      name: "minPeakValue",
       type: "number",
       default: 3,
       min: 1,
       max: 20,
-      description: "Minimum peak R required before rule activates"
+      description: "Minimum peak value required before rule activates"
     },
     {
-      name: "maxDrawdownR",
+      name: "minPeakUnit",
+      type: "string",
+      default: "R",
+      description: "Unit of minPeak (must match maxDrawdownUnit and minCurrentUnit)",
+      options: [...UNIT_OPTIONS]
+    },
+    {
+      name: "maxDrawdownValue",
       type: "number",
       default: 1.5,
       min: 0.5,
       max: 10,
-      description: "Maximum R that can be given back to market"
+      description: "Maximum drawdown from peak before closing"
+    },
+    {
+      name: "maxDrawdownUnit",
+      type: "string",
+      default: "R",
+      description: "Unit of maxDrawdown (must match minPeakUnit and minCurrentUnit)",
+      options: [...UNIT_OPTIONS]
+    },
+    {
+      name: "minCurrentValue",
+      type: "number",
+      default: 0,
+      min: 0,
+      max: 10,
+      description: "Optional minimum current profit-from-entry to still trigger (0 = omit the gate)"
+    },
+    {
+      name: "minCurrentUnit",
+      type: "string",
+      default: "R",
+      description: "Unit of minCurrent (must match minPeakUnit and maxDrawdownUnit when minCurrentValue > 0)",
+      options: [...UNIT_OPTIONS]
     },
     {
       name: "closePercentage",
@@ -854,7 +901,20 @@ var MAX_DRAWDOWN_FROM_PEAK_TEMPLATE = {
       description: "Percentage of position to close"
     }
   ],
-  create: createMaxDrawdownFromPeakTemplate
+  create: (flat) => {
+    const source = flat;
+    const params = {
+      minPeak: readMeasurement(source, "minPeak"),
+      maxDrawdown: readMeasurement(source, "maxDrawdown"),
+      closePercentage: flat.closePercentage
+    };
+    if (flat.minCurrentValue > 0) {
+      params.minCurrent = readMeasurement(source, "minCurrent");
+    }
+    if (flat.ruleId !== void 0)
+      params.ruleId = flat.ruleId;
+    return createMaxDrawdownFromPeakTemplate(params);
+  }
 };
 var PATTERN_BASED_EXIT_TEMPLATE = {
   id: "pattern-based-exit",
@@ -1060,9 +1120,9 @@ var tradingRuleRegistry = {
   // ============================================================================
   // Max Drawdown from Peak (protection contre retournements)
   // ============================================================================
-  "max-dd-4r-peak-25r": createMaxDrawdownFromPeakTemplate({ minPeakR: 4, maxDrawdownR: 2.5, ruleId: "4R_peak_25R_dd" }),
-  "max-dd-3r-peak-15r": createMaxDrawdownFromPeakTemplate({ minPeakR: 3, maxDrawdownR: 1.5, ruleId: "3R_peak_15R_dd" }),
-  "max-dd-2r-peak-1r": createMaxDrawdownFromPeakTemplate({ minPeakR: 2, maxDrawdownR: 1, ruleId: "2R_peak_1R_dd" }),
+  "max-dd-4r-peak-25r": createMaxDrawdownFromPeakTemplate({ minPeak: { value: 4, unit: "R" }, maxDrawdown: { value: 2.5, unit: "R" }, ruleId: "4R_peak_25R_dd" }),
+  "max-dd-3r-peak-15r": createMaxDrawdownFromPeakTemplate({ minPeak: { value: 3, unit: "R" }, maxDrawdown: { value: 1.5, unit: "R" }, ruleId: "3R_peak_15R_dd" }),
+  "max-dd-2r-peak-1r": createMaxDrawdownFromPeakTemplate({ minPeak: { value: 2, unit: "R" }, maxDrawdown: { value: 1, unit: "R" }, ruleId: "2R_peak_1R_dd" }),
   // ============================================================================
   // Pattern-based Exit (sortie sur pattern de bougie)
   // ============================================================================
@@ -1417,7 +1477,7 @@ export {
   createPartialCloseDynamic,
   createPatternBasedExitTemplate,
   createPatternDetectedCondition,
-  createPeakRReachedCondition,
+  createPeakReachedCondition,
   createPlaceOrderAction,
   createPriceAboveCondition,
   createPriceBelowCondition,

@@ -1,7 +1,6 @@
 import { RuleTemplate } from 'rule-engine-monorepo/rule-engine';
 import type { Unit } from '../domain/Measurement.js';
 import { TimeBasedStopTemplateParams } from './timeBasedStop.js';
-import { MaxDrawdownFromPeakTemplateParams } from './maxDrawdownFromPeak.js';
 import { CancelPendingOnPriceLevelTemplateParams } from './cancelPendingOnPriceLevel.js';
 import { PartialCloseAtPriceTemplateParams } from './partialCloseAtPrice.js';
 /**
@@ -84,13 +83,24 @@ interface TrailingStopFlatParams {
     activationValue: number;
     activationUnit: Unit;
 }
+interface MaxDrawdownFromPeakFlatParams {
+    minPeakValue: number;
+    minPeakUnit: Unit;
+    maxDrawdownValue: number;
+    maxDrawdownUnit: Unit;
+    /** `<= 0` means "omit the minCurrent gate". */
+    minCurrentValue: number;
+    minCurrentUnit: Unit;
+    closePercentage: number;
+    ruleId?: string;
+}
 export declare const TRAILING_STOP_TEMPLATE: TemplateDefinition<TrailingStopFlatParams>;
 export declare const SL_BREAKEVEN_TEMPLATE: TemplateDefinition<SLBreakevenFlatParams>;
 export declare const LOCK_IN_PROFIT_STOP_TEMPLATE: TemplateDefinition<LockInFlatParams>;
 export declare const TP_TEMPLATE: TemplateDefinition<TPFlatParams>;
 export declare const FREE_TRADE_TEMPLATE: TemplateDefinition<FreeTradeFlatParams>;
 export declare const TIME_BASED_STOP_TEMPLATE: TemplateDefinition<TimeBasedStopTemplateParams>;
-export declare const MAX_DRAWDOWN_FROM_PEAK_TEMPLATE: TemplateDefinition<MaxDrawdownFromPeakTemplateParams>;
+export declare const MAX_DRAWDOWN_FROM_PEAK_TEMPLATE: TemplateDefinition<MaxDrawdownFromPeakFlatParams>;
 export declare const PATTERN_BASED_EXIT_TEMPLATE: TemplateDefinition<PatternExitFlatParams>;
 export declare const CANCEL_PENDING_ON_PRICE_LEVEL_TEMPLATE: TemplateDefinition<CancelPendingOnPriceLevelTemplateParams>;
 export declare const PARTIAL_CLOSE_AT_PRICE_TEMPLATE: TemplateDefinition<PartialCloseAtPriceTemplateParams>;

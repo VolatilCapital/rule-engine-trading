@@ -1,5 +1,5 @@
 import { AtomicCondition, Operator, LogicalCondition, LogicalOperator, MemorizableCondition } from 'rule-engine-monorepo/rule-engine';
-import { assertMeasurement, PROFIT_FIELD } from '../domain/Measurement.js';
+import { assertMeasurement, PROFIT_FIELD, PEAK_FIELD, DRAWDOWN_FROM_PEAK_FIELD, } from '../domain/Measurement.js';
 // ============================================================================
 // Basic Conditions
 // ============================================================================
@@ -68,23 +68,42 @@ export function createTimeElapsedCondition(minutes) {
     return AtomicCondition.create('elapsedMinutes', Operator.GREATER_EQUAL, minutes, 'time_elapsed_check');
 }
 // ============================================================================
-// R-based Tracking Conditions
-// For tracking peak R and drawdown from peak
-// Requires context to have: peakR (number), currentR (number)
+// Peak / Drawdown Tracking Conditions (multi-unit)
+// For tracking the trade's most-favorable-ever peak and the drawdown from it.
+//
+// The unit dispatches the context field via the maps in `Measurement.ts`:
+//   - PEAK_FIELD[unit]                → 'peakR' | 'peakPctFromEntry' | 'peakPriceMove'
+//   - DRAWDOWN_FROM_PEAK_FIELD[unit]  → 'drawdownFromPeakR' | 'drawdownFromPeakPct'
+//                                       | 'drawdownFromPeakPrice'
+//
+// All three fields per unit are populated side-awarely (profit-positive) by
+// the adapter (testkit harness or production context builder).
 // ============================================================================
 /**
- * Creates a condition that checks if peak R was reached.
- * Context must include `peakR` field (highest R reached during trade).
+ * Creates a "peak-from-entry >= threshold" atomic condition.
+ *
+ * The context field is selected from `PEAK_FIELD[threshold.unit]`:
+ * - `R`       → `peakR`
+ * - `percent` → `peakPctFromEntry`
+ * - `price`   → `peakPriceMove`
  */
-export function createPeakRReachedCondition(thresholdR) {
-    return AtomicCondition.create('peakR', Operator.GREATER_EQUAL, thresholdR, 'peakR_reached_check');
+export function createPeakReachedCondition(threshold) {
+    assertMeasurement('threshold', threshold);
+    const field = PEAK_FIELD[threshold.unit];
+    return AtomicCondition.create(field, Operator.GREATER_EQUAL, threshold.value, `${field}_reached_check`);
 }
 /**
- * Creates a condition that checks if price has dropped from peak by X R.
- * Context must include `drawdownFromPeakR` field (peakR - currentR).
+ * Creates a "drawdown-from-peak >= threshold" atomic condition.
+ *
+ * The context field is selected from `DRAWDOWN_FROM_PEAK_FIELD[threshold.unit]`:
+ * - `R`       → `drawdownFromPeakR`
+ * - `percent` → `drawdownFromPeakPct`
+ * - `price`   → `drawdownFromPeakPrice`
  */
-export function createDrawdownFromPeakCondition(drawdownR) {
-    return AtomicCondition.create('drawdownFromPeakR', Operator.GREATER_EQUAL, drawdownR, 'drawdown_from_peak_check');
+export function createDrawdownFromPeakCondition(threshold) {
+    assertMeasurement('threshold', threshold);
+    const field = DRAWDOWN_FROM_PEAK_FIELD[threshold.unit];
+    return AtomicCondition.create(field, Operator.GREATER_EQUAL, threshold.value, `${field}_check`);
 }
 // ============================================================================
 // Pattern-based Conditions

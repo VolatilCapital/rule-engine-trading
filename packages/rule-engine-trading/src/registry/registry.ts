@@ -55,9 +55,9 @@ export const tradingRuleRegistry: Record<string, RuleTemplate> = {
   // ============================================================================
   // Max Drawdown from Peak (protection contre retournements)
   // ============================================================================
-  'max-dd-4r-peak-25r': createMaxDrawdownFromPeakTemplate({ minPeakR: 4, maxDrawdownR: 2.5, ruleId: '4R_peak_25R_dd' }),
-  'max-dd-3r-peak-15r': createMaxDrawdownFromPeakTemplate({ minPeakR: 3, maxDrawdownR: 1.5, ruleId: '3R_peak_15R_dd' }),
-  'max-dd-2r-peak-1r': createMaxDrawdownFromPeakTemplate({ minPeakR: 2, maxDrawdownR: 1, ruleId: '2R_peak_1R_dd' }),
+  'max-dd-4r-peak-25r': createMaxDrawdownFromPeakTemplate({ minPeak: { value: 4, unit: 'R' }, maxDrawdown: { value: 2.5, unit: 'R' }, ruleId: '4R_peak_25R_dd' }),
+  'max-dd-3r-peak-15r': createMaxDrawdownFromPeakTemplate({ minPeak: { value: 3, unit: 'R' }, maxDrawdown: { value: 1.5, unit: 'R' }, ruleId: '3R_peak_15R_dd' }),
+  'max-dd-2r-peak-1r': createMaxDrawdownFromPeakTemplate({ minPeak: { value: 2, unit: 'R' }, maxDrawdown: { value: 1, unit: 'R' }, ruleId: '2R_peak_1R_dd' }),
 
   // ============================================================================
   // Pattern-based Exit (sortie sur pattern de bougie)

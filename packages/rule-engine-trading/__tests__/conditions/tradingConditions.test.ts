@@ -5,6 +5,8 @@ import {
   createAndCondition,
   createHistoricalCondition,
   createPriceBelowCondition,
+  createPeakReachedCondition,
+  createDrawdownFromPeakCondition,
 } from '../../src/conditions/tradingConditions.js';
 
 describe('tradingConditions', () => {
@@ -56,6 +58,59 @@ describe('tradingConditions', () => {
       const cond = createPriceBelowCondition(100);
       expect(cond.field).toBe('currentPrice');
       expect(cond.value.rawValue).toBe(100);
+    });
+  });
+
+  describe('createPeakReachedCondition', () => {
+    it('dispatches to peakR for unit R', () => {
+      const cond = createPeakReachedCondition({ value: 3, unit: 'R' });
+      expect(cond.field).toBe('peakR');
+      expect(cond.value.rawValue).toBe(3);
+    });
+
+    it('dispatches to peakPctFromEntry for unit percent', () => {
+      const cond = createPeakReachedCondition({ value: 1.5, unit: 'percent' });
+      expect(cond.field).toBe('peakPctFromEntry');
+      expect(cond.value.rawValue).toBe(1.5);
+    });
+
+    it('dispatches to peakPriceMove for unit price', () => {
+      const cond = createPeakReachedCondition({ value: 0.5, unit: 'price' });
+      expect(cond.field).toBe('peakPriceMove');
+      expect(cond.value.rawValue).toBe(0.5);
+    });
+
+    it('throws on malformed measurement', () => {
+      expect(() =>
+        createPeakReachedCondition({ value: 0, unit: 'R' }),
+      ).toThrow(/threshold\.value must be > 0/);
+    });
+  });
+
+  describe('createDrawdownFromPeakCondition', () => {
+    it('dispatches to drawdownFromPeakR for unit R', () => {
+      const cond = createDrawdownFromPeakCondition({ value: 1.5, unit: 'R' });
+      expect(cond.field).toBe('drawdownFromPeakR');
+      expect(cond.value.rawValue).toBe(1.5);
+    });
+
+    it('dispatches to drawdownFromPeakPct for unit percent', () => {
+      const cond = createDrawdownFromPeakCondition({ value: 1, unit: 'percent' });
+      expect(cond.field).toBe('drawdownFromPeakPct');
+      expect(cond.value.rawValue).toBe(1);
+    });
+
+    it('dispatches to drawdownFromPeakPrice for unit price', () => {
+      const cond = createDrawdownFromPeakCondition({ value: 0.25, unit: 'price' });
+      expect(cond.field).toBe('drawdownFromPeakPrice');
+      expect(cond.value.rawValue).toBe(0.25);
+    });
+
+    it('throws on malformed measurement', () => {
+      expect(() =>
+        // @ts-expect-error invalid unit at the boundary
+        createDrawdownFromPeakCondition({ value: 1, unit: 'pips' }),
+      ).toThrow(/threshold\.unit must be one of R \| percent \| price/);
     });
   });
 });

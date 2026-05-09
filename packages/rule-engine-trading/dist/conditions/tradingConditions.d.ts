@@ -30,15 +30,23 @@ export declare function createPriceAboveCondition(price: number): AtomicConditio
  */
 export declare function createTimeElapsedCondition(minutes: number): AtomicCondition;
 /**
- * Creates a condition that checks if peak R was reached.
- * Context must include `peakR` field (highest R reached during trade).
+ * Creates a "peak-from-entry >= threshold" atomic condition.
+ *
+ * The context field is selected from `PEAK_FIELD[threshold.unit]`:
+ * - `R`       → `peakR`
+ * - `percent` → `peakPctFromEntry`
+ * - `price`   → `peakPriceMove`
  */
-export declare function createPeakRReachedCondition(thresholdR: number): AtomicCondition;
+export declare function createPeakReachedCondition(threshold: Measurement): AtomicCondition;
 /**
- * Creates a condition that checks if price has dropped from peak by X R.
- * Context must include `drawdownFromPeakR` field (peakR - currentR).
+ * Creates a "drawdown-from-peak >= threshold" atomic condition.
+ *
+ * The context field is selected from `DRAWDOWN_FROM_PEAK_FIELD[threshold.unit]`:
+ * - `R`       → `drawdownFromPeakR`
+ * - `percent` → `drawdownFromPeakPct`
+ * - `price`   → `drawdownFromPeakPrice`
  */
-export declare function createDrawdownFromPeakCondition(drawdownR: number): AtomicCondition;
+export declare function createDrawdownFromPeakCondition(threshold: Measurement): AtomicCondition;
 /**
  * Creates a condition that checks if a specific candle pattern is detected.
  * Context must include `detectedPatterns` array of pattern names.

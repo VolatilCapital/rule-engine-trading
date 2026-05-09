@@ -35,6 +35,24 @@ export interface TradingExecutionContext {
    * Formula (adapter): `sign × (currentPrice − entryPrice)`.
    */
   currentPriceMove: number;
+  /**
+   * Side-aware, profit-positive percent peak from entry (most-favorable-ever
+   * percent move seen during the trade lifetime). Always ≥ 0 by construction.
+   */
+  peakPctFromEntry?: number;
+  /**
+   * Side-aware, profit-positive absolute price peak move from entry
+   * (most-favorable-ever absolute price move). Always ≥ 0 by construction.
+   */
+  peakPriceMove?: number;
+  /**
+   * Drawdown from the percent peak: `max(0, peakPctFromEntry − currentPctFromEntry)`.
+   */
+  drawdownFromPeakPct?: number;
+  /**
+   * Drawdown from the price peak: `max(0, peakPriceMove − currentPriceMove)`.
+   */
+  drawdownFromPeakPrice?: number;
   [key: string]: unknown;
 }
 

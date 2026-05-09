@@ -4,6 +4,7 @@ import { createTimeBasedStopTemplate } from './timeBasedStop.js';
 import { createFreeTradeTemplate } from './freeTrade.js';
 import { createLockInProfitStopTemplate } from './lockInProfitStop.js';
 import { createMaxDrawdownFromPeakTemplate } from './maxDrawdownFromPeak.js';
+// (MaxDrawdownFromPeakTemplateParams kept imported for downstream typing.)
 import { createPatternBasedExitTemplate } from './patternBasedExit.js';
 import { createCancelPendingOnPriceLevelTemplate } from './cancelPendingOnPriceLevel.js';
 import { createPartialCloseAtPriceTemplate } from './partialCloseAtPrice.js';
@@ -270,25 +271,54 @@ export const TIME_BASED_STOP_TEMPLATE = {
 export const MAX_DRAWDOWN_FROM_PEAK_TEMPLATE = {
     id: 'max-drawdown-from-peak',
     name: 'Max Drawdown from Peak',
-    description: 'Close position if profit drops too much from peak R',
+    description: 'Close position if profit drops too much from the peak reached during the trade. minPeak / maxDrawdown / minCurrent must share the same unit (R, percent, or price). Set minCurrentValue ≤ 0 to omit the optional current-profit gate.',
     category: 'risk-management',
     maturity: 'lab',
     parameters: [
         {
-            name: 'minPeakR',
+            name: 'minPeakValue',
             type: 'number',
             default: 3,
             min: 1,
             max: 20,
-            description: 'Minimum peak R required before rule activates'
+            description: 'Minimum peak value required before rule activates'
         },
         {
-            name: 'maxDrawdownR',
+            name: 'minPeakUnit',
+            type: 'string',
+            default: 'R',
+            description: 'Unit of minPeak (must match maxDrawdownUnit and minCurrentUnit)',
+            options: [...UNIT_OPTIONS],
+        },
+        {
+            name: 'maxDrawdownValue',
             type: 'number',
             default: 1.5,
             min: 0.5,
             max: 10,
-            description: 'Maximum R that can be given back to market'
+            description: 'Maximum drawdown from peak before closing'
+        },
+        {
+            name: 'maxDrawdownUnit',
+            type: 'string',
+            default: 'R',
+            description: 'Unit of maxDrawdown (must match minPeakUnit and minCurrentUnit)',
+            options: [...UNIT_OPTIONS],
+        },
+        {
+            name: 'minCurrentValue',
+            type: 'number',
+            default: 0,
+            min: 0,
+            max: 10,
+            description: 'Optional minimum current profit-from-entry to still trigger (0 = omit the gate)'
+        },
+        {
+            name: 'minCurrentUnit',
+            type: 'string',
+            default: 'R',
+            description: 'Unit of minCurrent (must match minPeakUnit and maxDrawdownUnit when minCurrentValue > 0)',
+            options: [...UNIT_OPTIONS],
         },
         {
             name: 'closePercentage',
@@ -299,7 +329,20 @@ export const MAX_DRAWDOWN_FROM_PEAK_TEMPLATE = {
             description: 'Percentage of position to close'
         }
     ],
-    create: createMaxDrawdownFromPeakTemplate
+    create: (flat) => {
+        const source = flat;
+        const params = {
+            minPeak: readMeasurement(source, 'minPeak'),
+            maxDrawdown: readMeasurement(source, 'maxDrawdown'),
+            closePercentage: flat.closePercentage,
+        };
+        if (flat.minCurrentValue > 0) {
+            params.minCurrent = readMeasurement(source, 'minCurrent');
+        }
+        if (flat.ruleId !== undefined)
+            params.ruleId = flat.ruleId;
+        return createMaxDrawdownFromPeakTemplate(params);
+    },
 };
 // ============================================================================
 // Pattern-based Templates

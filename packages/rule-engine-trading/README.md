@@ -89,6 +89,61 @@ const trailingMixed = createTrailingStopTemplate({
 | `trailingNewSL` | `number` | Candidate new SL price |
 | `trailingShouldExecute` | `0 \| 1` | 1 when activation is met AND candidate SL is favorable |
 
+### Max Drawdown from Peak
+
+Closes (or partially closes) the position when the drawdown from the
+most-favorable-ever profit-from-entry exceeds a configurable threshold. All
+three measurement parameters (`minPeak`, `maxDrawdown`, optional `minCurrent`)
+**must share the same unit** — drawdown is a difference, mixing units would
+be meaningless. The factory throws synchronously on a unit mismatch.
+
+```ts
+import { createMaxDrawdownFromPeakTemplate } from '@volatil/rule-engine-trading';
+
+// R: close once a +3R peak gives back 1.5R.
+const ddR = createMaxDrawdownFromPeakTemplate({
+  minPeak: { value: 3, unit: 'R' },
+  maxDrawdown: { value: 1.5, unit: 'R' },
+});
+
+// Percent: close once a +2% peak gives back 1%.
+const ddPct = createMaxDrawdownFromPeakTemplate({
+  minPeak: { value: 2, unit: 'percent' },
+  maxDrawdown: { value: 1, unit: 'percent' },
+});
+
+// Price: close once a +0.0050 peak gives back 0.0020, but only while still up at least 0.0010.
+const ddPrice = createMaxDrawdownFromPeakTemplate({
+  minPeak: { value: 0.0050, unit: 'price' },
+  maxDrawdown: { value: 0.0020, unit: 'price' },
+  minCurrent: { value: 0.0010, unit: 'price' },
+});
+```
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `minPeak` | `Measurement` (`R`, `percent`, `price`) | Yes | Minimum peak required before the rule activates. `value > 0`. |
+| `maxDrawdown` | `Measurement` (same unit as `minPeak`) | Yes | Drawdown from the peak that triggers the close. `value > 0`. |
+| `minCurrent` | `Measurement` (same unit) | No | Optional: still requires the current profit-from-entry to be ≥ this value. `value >= 0`. |
+| `closePercentage` | `number` (0, 100] | No | Defaults to 100 (full close). |
+| `ruleId` | `string` | No | Disambiguates the auto-generated fact key. |
+
+**Behavior:** the adapter tracks `peakPrice` side-awarely (most favorable seen)
+and exposes the matching context fields per unit:
+
+| Unit | Peak field | Drawdown field |
+|---|---|---|
+| `R` | `peakR` | `drawdownFromPeakR` |
+| `percent` | `peakPctFromEntry` | `drawdownFromPeakPct` |
+| `price` | `peakPriceMove` | `drawdownFromPeakPrice` |
+
+All peak/drawdown quantities are profit-positive by construction, so the
+condition `peakX ≥ minPeak.value` reads naturally for both LONG and SHORT.
+
+Predefined R-only constants keep their identifiers — `MAX_DD_4R_PEAK_25R_DD`,
+`MAX_DD_3R_PEAK_15R_DD`, `MAX_DD_2R_PEAK_1R_DD`, `MAX_DD_5R_PEAK_2R_DD_MIN_1R` —
+and were rewritten in terms of `{ value: X, unit: 'R' }`.
+
 ### Multi-unit templates (Phase A)
 
 The following six templates accept `Measurement` parameters:

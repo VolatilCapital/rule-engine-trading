@@ -24,7 +24,7 @@ export { createPlaceOrderAction, createClosePositionAction } from './actions/pla
 export { createCancelPositionAction } from './actions/cancelPosition.js';
 export { createPartialCloseByQuantity, createPartialCloseByPercentage, createPartialCloseDynamic, PARTIAL_CLOSE_50_PERCENT, PARTIAL_CLOSE_25_PERCENT, PARTIAL_CLOSE_33_PERCENT, } from './actions/partialClose.js';
 // Conditions
-export { createProfitThresholdCondition, createProfitBelowCondition, createNotExecutedCondition, createExecutedCondition, createAndCondition, createOrCondition, createHistoricalCondition, createPriceBelowCondition, createPriceAboveCondition, createTimeElapsedCondition, createPeakRReachedCondition, createDrawdownFromPeakCondition, createPatternDetectedCondition, createBearishPatternCondition, createBullishPatternCondition, } from './conditions/tradingConditions.js';
+export { createProfitThresholdCondition, createProfitBelowCondition, createNotExecutedCondition, createExecutedCondition, createAndCondition, createOrCondition, createHistoricalCondition, createPriceBelowCondition, createPriceAboveCondition, createTimeElapsedCondition, createPeakReachedCondition, createDrawdownFromPeakCondition, createPatternDetectedCondition, createBearishPatternCondition, createBullishPatternCondition, } from './conditions/tradingConditions.js';
 // Predefined instances
 export { ACTIONS, CONDITIONS, TEMPLATES } from './registry/instances.js';
 // Registry

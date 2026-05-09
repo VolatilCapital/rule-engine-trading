@@ -124,7 +124,7 @@ export {
   createPriceBelowCondition,
   createPriceAboveCondition,
   createTimeElapsedCondition,
-  createPeakRReachedCondition,
+  createPeakReachedCondition,
   createDrawdownFromPeakCondition,
   createPatternDetectedCondition,
   createBearishPatternCondition,

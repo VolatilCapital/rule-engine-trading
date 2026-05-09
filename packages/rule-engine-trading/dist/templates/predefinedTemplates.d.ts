@@ -8,6 +8,7 @@ import { MaxDrawdownFromPeakTemplateParams } from './maxDrawdownFromPeak.js';
 import { PatternBasedExitTemplateParams } from './patternBasedExit.js';
 import { CancelPendingOnPriceLevelTemplateParams } from './cancelPendingOnPriceLevel.js';
 import { PartialCloseAtPriceTemplateParams } from './partialCloseAtPrice.js';
+import { TrailingStopParams } from './trailingStop.js';
 /**
  * Template categories for rule classification.
  */
@@ -45,6 +46,7 @@ export interface TemplateDefinition<T = any> {
     }>;
     create: (params: T) => RuleTemplate;
 }
+export declare const TRAILING_STOP_TEMPLATE: TemplateDefinition<TrailingStopParams>;
 export declare const SL_BREAKEVEN_TEMPLATE: TemplateDefinition<MoveSLToBreakevenTemplateParams>;
 export declare const LOCK_IN_PROFIT_STOP_TEMPLATE: TemplateDefinition<LockInProfitStopTemplateParams>;
 export declare const TP_TEMPLATE: TemplateDefinition<TakeProfitTemplateParams>;

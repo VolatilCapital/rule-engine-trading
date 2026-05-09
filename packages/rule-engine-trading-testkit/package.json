@@ -1,6 +1,6 @@
 {
   "name": "@volatil/rule-engine-trading-testkit",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "description": "Integration test harness for @volatil/rule-engine-trading against a simulated broker",
@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@volatil/rule-engine-trading": "workspace:*",
-    "rule-engine-monorepo": "github:VolatilCapital/rule-engine-monorepo",
+    "rule-engine-monorepo": "github:VolatilCapital/rule-engine-monorepo#7e93f02",
     "decimal.js": "^10.6.0"
   },
   "peerDependencies": {

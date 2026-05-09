@@ -2,7 +2,10 @@ export { ActionType, ConditionReference, TriggerType } from './domain/TradingEnu
 export { createMoveSLToBreakevenTemplate, type MoveSLToBreakevenTemplateParams } from './templates/moveSLToBreakeven.js';
 export { createTakeProfitTemplate, type TakeProfitTemplateParams } from './templates/takeProfit.js';
 export { createTakePartialTemplate, TAKE_PARTIAL_1R_50PCT, TAKE_PARTIAL_1R_33PCT, TAKE_PARTIAL_2R_50PCT, TAKE_PARTIAL_1R_25PCT, TAKE_PARTIAL_2R_25PCT, type TakePartialTemplateParams, } from './templates/takePartial.js';
-export { SL_BREAKEVEN_TEMPLATE, TP_TEMPLATE, LOCK_IN_PROFIT_STOP_TEMPLATE, FREE_TRADE_TEMPLATE, TIME_BASED_STOP_TEMPLATE, MAX_DRAWDOWN_FROM_PEAK_TEMPLATE, PATTERN_BASED_EXIT_TEMPLATE, CANCEL_PENDING_ON_PRICE_LEVEL_TEMPLATE, PARTIAL_CLOSE_AT_PRICE_TEMPLATE, templateDefinitions, type TemplateDefinition, type TemplateCategory, type TemplateMaturity, } from './templates/predefinedTemplates.js';
+export { TRAILING_STOP_TEMPLATE, SL_BREAKEVEN_TEMPLATE, TP_TEMPLATE, LOCK_IN_PROFIT_STOP_TEMPLATE, FREE_TRADE_TEMPLATE, TIME_BASED_STOP_TEMPLATE, MAX_DRAWDOWN_FROM_PEAK_TEMPLATE, PATTERN_BASED_EXIT_TEMPLATE, CANCEL_PENDING_ON_PRICE_LEVEL_TEMPLATE, PARTIAL_CLOSE_AT_PRICE_TEMPLATE, templateDefinitions, type TemplateDefinition, type TemplateCategory, type TemplateMaturity, } from './templates/predefinedTemplates.js';
+export { createTrailingStopTemplate, 
+/** @internal Used by testkit harness to retrieve TrailingStopParams from a RuleTemplate. */
+trailingStopParamsMap, type TrailingStopParams, } from './templates/trailingStop.js';
 export { createPartialCloseAtPriceTemplate, type PartialCloseAtPriceTemplateParams, } from './templates/partialCloseAtPrice.js';
 export { createTimeBasedStopTemplate, TIME_STOP_30MIN_1R, TIME_STOP_15MIN_05R, TIME_STOP_60MIN_2R, type TimeBasedStopTemplateParams, } from './templates/timeBasedStop.js';
 export { createFreeTradeTemplate, FREE_TRADE_2R, FREE_TRADE_3R, FREE_TRADE_1_5R, FREE_TRADE_4R, type FreeTradeTemplateParams, } from './templates/freeTrade.js';

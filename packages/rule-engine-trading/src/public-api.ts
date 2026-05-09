@@ -14,6 +14,7 @@ export {
   type TakePartialTemplateParams,
 } from './templates/takePartial.js';
 export {
+  TRAILING_STOP_TEMPLATE,
   SL_BREAKEVEN_TEMPLATE,
   TP_TEMPLATE,
   LOCK_IN_PROFIT_STOP_TEMPLATE,
@@ -28,6 +29,12 @@ export {
   type TemplateCategory,
   type TemplateMaturity,
 } from './templates/predefinedTemplates.js';
+export {
+  createTrailingStopTemplate,
+  /** @internal Used by testkit harness to retrieve TrailingStopParams from a RuleTemplate. */
+  trailingStopParamsMap,
+  type TrailingStopParams,
+} from './templates/trailingStop.js';
 export {
   createPartialCloseAtPriceTemplate,
   type PartialCloseAtPriceTemplateParams,

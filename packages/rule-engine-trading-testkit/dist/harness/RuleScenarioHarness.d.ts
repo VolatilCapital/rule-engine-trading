@@ -89,6 +89,9 @@ export declare class RuleScenarioHarness {
      * Attach a rule template to the open position.
      * Instantiates a RuleInstance, saves it to the repository, and registers
      * its ID so that tick() will evaluate it.
+     *
+     * If the template was created by createTrailingStopTemplate, the params
+     * are retrieved from the WeakMap and stored for context population.
      */
     attachRule(template: RuleTemplate, _params?: Record<string, unknown>): Promise<void>;
     /**
@@ -104,7 +107,8 @@ export declare class RuleScenarioHarness {
     setPatterns(patterns: Record<string, boolean>): void;
     /**
      * Evaluate all attached rules against the current broker state.
-     * Call this manually if you drive the price feed without using priceTo().
+     * Each rule gets its own context so trailing stop helpers can be
+     * computed per-rule using the rule's specific TrailingStopParams.
      */
     tick(): Promise<void>;
     /** Current SL of the open position (undefined if no position or no SL set). */

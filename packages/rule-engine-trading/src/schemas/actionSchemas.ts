@@ -118,7 +118,11 @@ export const scaleOutSchema: ActionSchema = {
 };
 
 /**
- * Schema for START_TRAILING_STOP action
+ * Schema for START_TRAILING_STOP action.
+ *
+ * @deprecated Use the `trailing-stop` template (`createTrailingStopTemplate`) instead.
+ * This raw action schema had no executor and is superseded by the template-based
+ * approach that uses `MOVE_STOP_LOSS` with `isRecurring: true`.
  */
 export const startTrailingStopSchema: ActionSchema = {
   actionRef: ActionType.START_TRAILING_STOP,

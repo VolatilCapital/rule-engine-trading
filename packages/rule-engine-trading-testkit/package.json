@@ -1,6 +1,6 @@
 {
   "name": "@volatil/rule-engine-trading-testkit",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "description": "Integration test harness for @volatil/rule-engine-trading against a simulated broker",

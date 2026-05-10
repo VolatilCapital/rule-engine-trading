@@ -84,12 +84,12 @@ Après `.run()`, `sc.harness` expose le `RuleScenarioHarness` sous-jacent pour l
 
 ### Harness / Calculs
 
-- **Calcul du R** — `(currentPrice - entry) / (entry - SL)` valide uniquement pour les positions BUY. À inverser pour SELL.
+- **Calcul du R** — side-aware via `sign = +1` (BUY) / `−1` (SELL). `currentR = (currentPrice − entry) / (entryPrice − initialSL)`, `currentPriceMove = sign × (currentPrice − entryPrice)`, `currentPctFromEntry = (currentPriceMove / entryPrice) × 100`.
 - **`elapsedMinutes`** — calculé via le port `Clock` injecté à `HarnessConfig`. Par défaut `systemClock` (Date.now). Pour les templates time-based (`timeBasedStop`), passer `clock: new TestClock()` puis utiliser `.advanceTime(minutes)` du DSL.
 - **Convention prix `bid = ask = price`** — spread zéro. Déterministe mais ne teste pas les scénarios spread-dépendants.
 - **`patterns` context** — peuplé via `.setPatterns({ ... })` sur le DSL ou `harness.setPatterns(...)`. Les templates pattern-based (`patternBasedExit`) lisent les flags via JsonLogic en notation pointée (ex: `patterns.bearish`).
 - **`attachRule(params)`** — le paramètre `params` n'est pas transmis au template. Les templates reçoivent tous leurs paramètres via leur factory (ex: `createMoveSLToBreakevenTemplate({ thresholdR: 1 })`).
-- **`lockInStopPrice_<R>R` pré-calculé** — le contexte expose `lockInStopPrice_0.5R`, `_1R`, `_1.5R`, `_2R`, `_2.5R`, `_3R`, `_4R`, `_5R` (BUY uniquement). Pour des R hors liste, étendre le tableau dans `RuleScenarioHarness#buildContext`.
+- **`lockInStopPrice_<value><unitSuffix>` pré-calculé** — le contexte expose une clé par règle lock-in enregistrée. Suffixes : `R`, `pct`, `price`. Exemples : `lockInStopPrice_1R`, `lockInStopPrice_0_5pct`, `lockInStopPrice_0_5price`. Le calcul est side-aware : BUY → `entry + lockIn`, SELL → `entry − lockIn`.
 - **`trailingNewSL` / `trailingShouldExecute`** — le contexte expose ces champs pour les règles trailing-stop. Le calcul est side-aware (BUY/SELL via signe de `riskPerUnit`), avec état d'activation mémorisé (une fois le seuil atteint, l'activation persiste). Les autres règles reçoivent `trailingShouldExecute = 0`, `trailingNewSL = NaN`.
 
 ## Templates couverts
@@ -109,4 +109,15 @@ Après `.run()`, `sc.harness` expose le `RuleScenarioHarness` sous-jacent pour l
 | `cancelPendingOnPriceLevel` | Annule pending LIMIT BUY si prix franchit le niveau d'invalidation, garde-fou anti re-trigger | `cancelPendingOnPriceLevel.scenario.test.ts` |
 | `trailingStop` | Trailing stop 0.5R (BUY/SELL, activation optionnelle, récurrence) — 8 scénarios | `trailingStop.scenario.test.ts` |
 
-**Tous les templates publics sont couverts.** 12 templates / 13 fichiers de scénarios (smoke inclus) / 33 tests.
+### Scénarios multi-unit (percent / price)
+
+Les tests ci-dessous couvrent les templates avec paramètres `Measurement` dans les unités `percent` et `price` (LONG et SHORT), au-delà des scénarios R de base.
+
+| Fichier | Templates couverts | Unités |
+|---|---|---|
+| `multiUnit.trailing.scenarios.test.ts` | `trailingStop` | `percent`, `price`, activation mixte |
+| `multiUnit.profit.scenarios.test.ts` | `takeProfit`, `lockInProfitStop` | `percent`, `price` (TP) ; `percent` (lockIn) |
+| `multiUnit.peakDrawdown.scenarios.test.ts` | `maxDrawdownFromPeak` | `percent`, `price` |
+| `multiUnit.gap.scenarios.test.ts` | `takePartial`, `moveSLToBreakeven`, `freeTrade`, `lockInProfitStop` | `percent`, `price` |
+
+**Tous les templates publics sont couverts, toutes unités confondues (R / percent / price, LONG et SHORT).** 12 templates / 17 fichiers de scénarios (smoke inclus) / 76 tests.

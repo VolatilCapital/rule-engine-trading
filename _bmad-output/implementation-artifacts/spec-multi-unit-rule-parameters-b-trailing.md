@@ -2,8 +2,9 @@
 title: 'Multi-unit parameters — Phase B: trailing-stop'
 type: 'feature'
 created: '2026-05-09'
-status: 'in-progress'
+status: 'done'
 baseline_commit: '2ee9968'
+completed_commit: '6de4745'
 context:
   - '{project-root}/packages/rule-engine-trading/src/templates/trailingStop.ts'
   - '{project-root}/packages/rule-engine-trading/src/domain/Measurement.ts'

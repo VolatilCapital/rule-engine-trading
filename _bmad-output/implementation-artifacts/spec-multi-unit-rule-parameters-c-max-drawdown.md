@@ -2,8 +2,9 @@
 title: 'Multi-unit parameters — Phase C: max-drawdown-from-peak'
 type: 'feature'
 created: '2026-05-09'
-status: 'in-progress'
+status: 'done'
 baseline_commit: '6de4745'
+completed_commit: 'a93602c'
 context:
   - '{project-root}/packages/rule-engine-trading/src/templates/maxDrawdownFromPeak.ts'
   - '{project-root}/packages/rule-engine-trading/src/conditions/tradingConditions.ts'

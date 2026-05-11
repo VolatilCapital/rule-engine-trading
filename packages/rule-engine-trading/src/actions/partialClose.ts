@@ -27,9 +27,9 @@ export interface PartialCloseByPercentageParams {
  */
 export interface PartialCloseDynamicParams {
   /** JSON Logic expression for quantity */
-  quantity?: { var: string } | Record<string, unknown>;
+  quantity?: { var: string };
   /** JSON Logic expression for percentage */
-  percentage?: { var: string } | Record<string, unknown>;
+  percentage?: { var: string };
 }
 
 /**

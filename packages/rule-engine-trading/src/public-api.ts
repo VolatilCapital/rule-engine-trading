@@ -33,10 +33,12 @@ export {
   CANCEL_PENDING_ON_PRICE_LEVEL_TEMPLATE,
   PARTIAL_CLOSE_AT_PRICE_TEMPLATE,
   templateDefinitions,
+} from './templates/predefinedTemplates.js';
+export {
   type TemplateDefinition,
   type TemplateCategory,
   type TemplateMaturity,
-} from './templates/predefinedTemplates.js';
+} from './templates/types.js';
 export {
   createTrailingStopTemplate,
   /** @internal Used by testkit harness to retrieve TrailingStopParams from a RuleTemplate. */

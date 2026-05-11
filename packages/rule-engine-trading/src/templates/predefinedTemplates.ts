@@ -11,60 +11,10 @@ import { createPatternBasedExitTemplate, PatternBasedExitTemplateParams } from '
 import { createCancelPendingOnPriceLevelTemplate, CancelPendingOnPriceLevelTemplateParams } from './cancelPendingOnPriceLevel.js';
 import { createPartialCloseAtPriceTemplate, PartialCloseAtPriceTemplateParams } from './partialCloseAtPrice.js';
 import { createTrailingStopTemplate, TrailingStopParams } from './trailingStop.js';
+import type { TemplateDefinition } from './types.js';
 
-/**
- * Template categories for rule classification.
- */
-export type TemplateCategory =
-  | 'stop-loss'
-  | 'take-profit'
-  | 'time-based'
-  | 'risk-management'
-  | 'pattern-based'
-  | 'order-management'
-  | 'dynamic-position';
-
-/**
- * Template maturity level.
- * - 'stable': Production-ready, visible to all users.
- * - 'lab': Experimental, visible only to whitelisted accounts.
- */
-export type TemplateMaturity = 'stable' | 'lab';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface TemplateDefinition<T = any> {
-  id: string;
-  name: string;
-  description: string;
-  category: TemplateCategory;
-  maturity: TemplateMaturity;
-  /**
-   * Paramètres configurables du template.
-   *
-   * Champ `options` : si renseigné, le paramètre est rendu comme un <select> dans l'UI
-   * plutôt qu'un champ texte libre. Les valeurs doivent être des chaînes correspondant
-   * aux valeurs acceptées par le moteur de règles.
-   *
-   * Exemple : options: ['below', 'above'] pour un paramètre de direction de prix.
-   *
-   * Multi-unit measurement parameters (`Measurement` in the factory params) are
-   * exposed flat as a `<name>Value: number` + `<name>Unit: 'R'|'percent'|'price'`
-   * pair so the form pipeline stays simple. The `create` wrapper reassembles them
-   * into a `Measurement` object before delegating to the factory.
-   */
-  parameters: Array<{
-    /** Field name on the *flat UI params*, not necessarily on the factory params. */
-    name: string;
-    type: 'number' | 'string' | 'boolean';
-    default: number | string | boolean;
-    min?: number;
-    max?: number;
-    description?: string;
-    /** Valeurs autorisées. Si présent, l'UI affiche un select au lieu d'un champ texte. */
-    options?: string[];
-  }>;
-  create: (params: T) => RuleTemplate;
-}
+// Re-export types for public API consumers
+export type { TemplateCategory, TemplateMaturity, TemplateDefinition } from './types.js';
 
 // ──────────────────────────────────────────────────────────────────────────
 // Helpers for measurement-typed parameters
@@ -604,7 +554,7 @@ export const PARTIAL_CLOSE_AT_PRICE_TEMPLATE: TemplateDefinition<PartialCloseAtP
 // Registry of all template definitions
 // ============================================================================
 
-export const templateDefinitions: Record<string, TemplateDefinition> = {
+export const templateDefinitions = {
   // Stop Loss
   [TRAILING_STOP_TEMPLATE.id]: TRAILING_STOP_TEMPLATE,
   [SL_BREAKEVEN_TEMPLATE.id]: SL_BREAKEVEN_TEMPLATE,

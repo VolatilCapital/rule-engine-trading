@@ -2,7 +2,8 @@ import { ActionDefinition } from 'rule-engine-monorepo/rule-engine';
 import { ActionType } from '../domain/TradingEnums.js';
 
 export interface MoveStopLossParams {
-  newStopPrice: any; // Peut être une valeur ou une expression JSON Logic
+  /** A concrete value (number) or a JSON Logic expression (e.g. `{ var: "entryPrice" }`). */
+  newStopPrice: number | { var: string } | Record<string, unknown>;
 }
 
 export function createMoveStopLossAction(params: MoveStopLossParams): ActionDefinition {

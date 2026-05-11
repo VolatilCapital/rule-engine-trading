@@ -1,4 +1,4 @@
-// Enums pour les types d'actions
+// Action type enums
 export enum ActionType {
   MOVE_STOP_LOSS = 'MOVE_STOP_LOSS',
   PLACE_ORDER = 'PLACE_ORDER',
@@ -9,19 +9,19 @@ export enum ActionType {
 }
 
 /**
- * Type de déclencheur pour les règles.
- * Détermine quand une règle doit être évaluée.
+ * Trigger type for rules.
+ * Determines when a rule should be evaluated.
  */
 export enum TriggerType {
-  /** Évaluation sur changement de prix (avec throttle) */
+  /** Evaluation on price change (throttled) */
   PRICE = 'PRICE',
-  /** Évaluation à la clôture d'une bougie */
+  /** Evaluation at candle close */
   CANDLE_CLOSE = 'CANDLE_CLOSE',
-  /** Évaluation sur événement spécifique */
+  /** Evaluation on a specific event */
   EVENT = 'EVENT',
 }
 
-// Enums pour les références de conditions (pour internationalisation)
+// Condition reference enums (for internationalization)
 export enum ConditionReference {
   PROFIT_RATIO_GREATER_EQUAL = 'PROFIT_RATIO_GREATER_EQUAL',
   POSITION_SIZE_GREATER_THAN = 'POSITION_SIZE_GREATER_THAN',

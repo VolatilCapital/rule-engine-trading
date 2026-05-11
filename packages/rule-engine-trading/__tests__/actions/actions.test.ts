@@ -8,9 +8,9 @@ import { ActionType } from '../../src/domain/TradingEnums.js';
 describe('actions', () => {
   describe('createMoveStopLossAction', () => {
     it('should create with MOVE_STOP_LOSS actionRef', () => {
-      const action = createMoveStopLossAction({ newStopPrice: 'entryPrice' });
+      const action = createMoveStopLossAction({ newStopPrice: { var: 'entryPrice' } });
       expect(action.actionRef).toBe(ActionType.MOVE_STOP_LOSS);
-      expect(action.parameters.newStopPrice).toBe('entryPrice');
+      expect(action.parameters.newStopPrice).toEqual({ var: 'entryPrice' });
     });
   });
 

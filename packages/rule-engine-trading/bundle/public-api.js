@@ -611,7 +611,7 @@ var TRAILING_STOP_TEMPLATE = {
   name: "Trailing Stop",
   description: "Dynamically trails the stop loss at a configurable distance from the current price. Distance and activation may use independent units (R, percent, or price). Activates immediately when activationValue \u2264 0.",
   category: "stop-loss",
-  maturity: "lab",
+  maturity: "stable",
   parameters: [
     {
       name: "distanceValue",
@@ -764,7 +764,7 @@ var FREE_TRADE_TEMPLATE = {
   name: "Free Trade",
   description: "Recover initial risk by partial close at profit threshold",
   category: "take-profit",
-  maturity: "lab",
+  maturity: "stable",
   parameters: [
     {
       name: "triggerValue",
@@ -921,7 +921,7 @@ var PATTERN_BASED_EXIT_TEMPLATE = {
   name: "Pattern-based Exit",
   description: "Exit on candlestick patterns (bearish for long, bullish for short)",
   category: "pattern-based",
-  maturity: "lab",
+  maturity: "stable",
   parameters: [
     {
       name: "positionDirection",

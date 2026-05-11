@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "json-logic-js": "^2.0.5",
-    "rule-engine-monorepo": "github:VolatilCapital/rule-engine-monorepo#e3482ce"
+    "rule-engine-monorepo": "github:VolatilCapital/rule-engine-monorepo#c40e82e"
   },
   "devDependencies": {
     "rimraf": "^6.1.3",

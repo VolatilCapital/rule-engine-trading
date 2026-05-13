@@ -17,8 +17,8 @@ import type { RuleTemplate } from 'rule-engine-monorepo/rule-engine';
 import {
   SimulatedPlatformPosition,
   SinglePlatformRegistry,
-} from '@volatil/simulated-platform';
-import type { Position } from '@volatil/simulated-platform';
+} from '@volatil/simulated-platform/simulated-platform';
+import type { Position } from '@volatil/simulated-platform/simulated-platform';
 
 import { TestActionExecutor, type TradingExecutionContext } from './TestActionExecutor.js';
 import { systemClock, type Clock } from './Clock.js';
@@ -246,8 +246,11 @@ export class RuleScenarioHarness {
       quantity: opts.volume,
     });
 
-    if (!result.success || !result.positionId) {
-      throw new Error(`openPosition failed: ${result.reason ?? 'unknown'}`);
+    if (!result.success) {
+      throw new Error(`openPosition failed: ${result.reason}`);
+    }
+    if (!result.positionId) {
+      throw new Error('openPosition succeeded but returned no positionId');
     }
 
     this.#positionId = result.positionId;
@@ -288,8 +291,11 @@ export class RuleScenarioHarness {
       quantity: opts.volume,
       price: opts.price,
     });
-    if (!result.success || !result.orderId) {
-      throw new Error(`placePendingOrder failed: ${result.reason ?? 'unknown'}`);
+    if (!result.success) {
+      throw new Error(`placePendingOrder failed: ${result.reason}`);
+    }
+    if (!result.orderId) {
+      throw new Error('placePendingOrder succeeded but returned no orderId');
     }
     this.#pendingOrderId = result.orderId;
     return result.orderId;

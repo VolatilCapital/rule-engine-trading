@@ -48,13 +48,16 @@ importers:
       rule-engine-monorepo:
         specifier: github:VolatilCapital/rule-engine-monorepo#c40e82e
         version: git+https://git@github.com:VolatilCapital/rule-engine-monorepo.git#c40e82e3e694f04d2868d275189ab14de88a4261
+      seedrandom:
+        specifier: ^3.0.5
+        version: 3.0.5
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.17
       '@volatil/simulated-platform':
-        specifier: link:../../../simulated-platform-monorepo/packages/simulated-platform
-        version: link:../../../simulated-platform-monorepo/packages/simulated-platform
+        specifier: github:VolatilCapital/simulated-platform-monorepo#ab879461493bdfc1a4e14391a50cd4f601350e4c
+        version: simulated-platform-monorepo@git+https://git@github.com:VolatilCapital/simulated-platform-monorepo.git#ab879461493bdfc1a4e14391a50cd4f601350e4c
       rimraf:
         specifier: ^6.1.3
         version: 6.1.3
@@ -843,8 +846,15 @@ packages:
     version: 1.0.0
     engines: {npm: please-use-pnpm, yarn: please-use-pnpm}
 
+  seedrandom@3.0.5:
+    resolution: {integrity: sha512-8OwmbklUNzwezjGInmZ+2clQmExQPvomqjL7LFqOYqtmuxRgQYqOD3mHaU+MvZn5FLUeVxVfQjwLZW/n/JFuqg==}
+
   siginfo@2.0.0:
     resolution: {integrity: sha512-ybx0WO1/8bSBLEWXZvEd7gMW3Sn3JFlW3TvX1nREbDLRNQNaeNN8WK0meBwPdAaOI7TtRRRJn/Es1zhrrCHu7g==}
+
+  simulated-platform-monorepo@git+https://git@github.com:VolatilCapital/simulated-platform-monorepo.git#ab879461493bdfc1a4e14391a50cd4f601350e4c:
+    resolution: {commit: ab879461493bdfc1a4e14391a50cd4f601350e4c, repo: git@github.com:VolatilCapital/simulated-platform-monorepo.git, type: git}
+    version: 1.0.0
 
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
@@ -1610,7 +1620,11 @@ snapshots:
 
   rule-engine-monorepo@git+https://git@github.com:VolatilCapital/rule-engine-monorepo.git#c40e82e3e694f04d2868d275189ab14de88a4261: {}
 
+  seedrandom@3.0.5: {}
+
   siginfo@2.0.0: {}
+
+  simulated-platform-monorepo@git+https://git@github.com:VolatilCapital/simulated-platform-monorepo.git#ab879461493bdfc1a4e14391a50cd4f601350e4c: {}
 
   source-map-js@1.2.1: {}
 

@@ -4,7 +4,7 @@
  * to the rule-engine infrastructure, enabling end-to-end scenario tests.
  */
 import { RuleInstance, RuleExecutionService, JsonLogicConditionEvaluator, InMemoryRepository, silentLogger, } from 'rule-engine-monorepo/rule-engine';
-import { SimulatedPlatformPosition, SinglePlatformRegistry, } from '@volatil/simulated-platform';
+import { SimulatedPlatformPosition, SinglePlatformRegistry, } from '@volatil/simulated-platform/simulated-platform';
 import { TestActionExecutor } from './TestActionExecutor.js';
 import { systemClock } from './Clock.js';
 import { trailingStopParamsMap, lockInProfitStopParamsMap, PROFIT_FIELD, } from '@volatil/rule-engine-trading';
@@ -131,8 +131,11 @@ export class RuleScenarioHarness {
             side: opts.side === 'BUY' ? 'buy' : 'sell',
             quantity: opts.volume,
         });
-        if (!result.success || !result.positionId) {
-            throw new Error(`openPosition failed: ${result.reason ?? 'unknown'}`);
+        if (!result.success) {
+            throw new Error(`openPosition failed: ${result.reason}`);
+        }
+        if (!result.positionId) {
+            throw new Error('openPosition succeeded but returned no positionId');
         }
         this.#positionId = result.positionId;
         this.#entryPrice = opts.entry;
@@ -169,8 +172,11 @@ export class RuleScenarioHarness {
             quantity: opts.volume,
             price: opts.price,
         });
-        if (!result.success || !result.orderId) {
-            throw new Error(`placePendingOrder failed: ${result.reason ?? 'unknown'}`);
+        if (!result.success) {
+            throw new Error(`placePendingOrder failed: ${result.reason}`);
+        }
+        if (!result.orderId) {
+            throw new Error('placePendingOrder succeeded but returned no orderId');
         }
         this.#pendingOrderId = result.orderId;
         return result.orderId;

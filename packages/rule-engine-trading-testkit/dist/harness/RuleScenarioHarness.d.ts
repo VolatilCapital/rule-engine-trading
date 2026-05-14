@@ -5,8 +5,8 @@
  */
 import { type ActionDefinition } from 'rule-engine-monorepo/rule-engine';
 import type { RuleTemplate } from 'rule-engine-monorepo/rule-engine';
-import { SimulatedPlatformPosition } from '@volatil/simulated-platform/simulated-platform';
-import type { Position } from '@volatil/simulated-platform/simulated-platform';
+import { SimulatedPlatformPosition } from '@volatil/simulated-platform';
+import type { Position } from '@volatil/simulated-platform';
 import { type Clock } from './Clock.js';
 /** Minimal set of facts the ContextProvider exposes to rule conditions. */
 export interface TradingContextFacts {

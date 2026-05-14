@@ -24,11 +24,11 @@ export interface PartialCloseDynamicParams {
     /** JSON Logic expression for quantity */
     quantity?: {
         var: string;
-    } | Record<string, unknown>;
+    };
     /** JSON Logic expression for percentage */
     percentage?: {
         var: string;
-    } | Record<string, unknown>;
+    };
 }
 /**
  * Creates a PARTIAL_CLOSE action with a fixed quantity.

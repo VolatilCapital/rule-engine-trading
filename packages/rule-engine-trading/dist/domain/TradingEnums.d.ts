@@ -7,15 +7,15 @@ export declare enum ActionType {
     CANCEL_POSITION = "CANCEL_POSITION"
 }
 /**
- * Type de déclencheur pour les règles.
- * Détermine quand une règle doit être évaluée.
+ * Trigger type for rules.
+ * Determines when a rule should be evaluated.
  */
 export declare enum TriggerType {
-    /** Évaluation sur changement de prix (avec throttle) */
+    /** Evaluation on price change (throttled) */
     PRICE = "PRICE",
-    /** Évaluation à la clôture d'une bougie */
+    /** Evaluation at candle close */
     CANDLE_CLOSE = "CANDLE_CLOSE",
-    /** Évaluation sur événement spécifique */
+    /** Evaluation on a specific event */
     EVENT = "EVENT"
 }
 export declare enum ConditionReference {

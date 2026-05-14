@@ -4,7 +4,7 @@
  * to the rule-engine infrastructure, enabling end-to-end scenario tests.
  */
 import { RuleInstance, RuleExecutionService, JsonLogicConditionEvaluator, InMemoryRepository, silentLogger, } from 'rule-engine-monorepo/rule-engine';
-import { SimulatedPlatformPosition, SinglePlatformRegistry, } from '@volatil/simulated-platform/simulated-platform';
+import { SimulatedPlatformPosition, SinglePlatformRegistry, } from '@volatil/simulated-platform';
 import { TestActionExecutor } from './TestActionExecutor.js';
 import { systemClock } from './Clock.js';
 import { trailingStopParamsMap, lockInProfitStopParamsMap, PROFIT_FIELD, } from '@volatil/rule-engine-trading';

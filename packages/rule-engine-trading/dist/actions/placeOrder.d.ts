@@ -1,6 +1,6 @@
 import { ActionDefinition } from 'rule-engine-monorepo/rule-engine';
-export interface PlaceOrderParams {
-    type: string;
+export interface PlaceOrderParams extends Record<string, unknown> {
+    type: 'market' | 'limit' | 'stop' | 'close_position';
     symbol?: string;
     side?: string;
     quantity?: number;

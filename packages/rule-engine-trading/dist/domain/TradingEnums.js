@@ -1,4 +1,4 @@
-// Enums pour les types d'actions
+// Action type enums
 export var ActionType;
 (function (ActionType) {
     ActionType["MOVE_STOP_LOSS"] = "MOVE_STOP_LOSS";
@@ -9,19 +9,19 @@ export var ActionType;
     ActionType["CANCEL_POSITION"] = "CANCEL_POSITION";
 })(ActionType || (ActionType = {}));
 /**
- * Type de déclencheur pour les règles.
- * Détermine quand une règle doit être évaluée.
+ * Trigger type for rules.
+ * Determines when a rule should be evaluated.
  */
 export var TriggerType;
 (function (TriggerType) {
-    /** Évaluation sur changement de prix (avec throttle) */
+    /** Evaluation on price change (throttled) */
     TriggerType["PRICE"] = "PRICE";
-    /** Évaluation à la clôture d'une bougie */
+    /** Evaluation at candle close */
     TriggerType["CANDLE_CLOSE"] = "CANDLE_CLOSE";
-    /** Évaluation sur événement spécifique */
+    /** Evaluation on a specific event */
     TriggerType["EVENT"] = "EVENT";
 })(TriggerType || (TriggerType = {}));
-// Enums pour les références de conditions (pour internationalisation)
+// Condition reference enums (for internationalization)
 export var ConditionReference;
 (function (ConditionReference) {
     ConditionReference["PROFIT_RATIO_GREATER_EQUAL"] = "PROFIT_RATIO_GREATER_EQUAL";

@@ -1,7 +1,7 @@
 import { ActionDefinition } from 'rule-engine-monorepo/rule-engine';
 import { ActionType } from '../domain/TradingEnums.js';
 
-export interface PlaceOrderParams {
+export interface PlaceOrderParams extends Record<string, unknown> {
   type: 'market' | 'limit' | 'stop' | 'close_position';
   symbol?: string;
   side?: string;

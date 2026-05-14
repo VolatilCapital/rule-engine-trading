@@ -6,7 +6,7 @@
  * Keeps an in-memory log of every executed action for assertion purposes.
  */
 import type { IActionExecutor, ActionExecutionResult, ActionDefinition } from 'rule-engine-monorepo/rule-engine';
-import type { SimulatedPlatformPosition } from '@volatil/simulated-platform/simulated-platform';
+import type { SimulatedPlatformPosition } from '@volatil/simulated-platform';
 /**
  * Execution context expected by this executor.
  * The harness populates this from broker state before each rule tick.
